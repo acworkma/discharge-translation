@@ -33,6 +33,10 @@ export interface RunnerResult {
   inputTokens?: number;
   outputTokens?: number;
   translatedText?: string;
+  /** Blob path to the rendered output document (same format as the upload). */
+  outputBlobPath?: string;
+  outputContentType?: string;
+  outputFilename?: string;
   scores?: ScoreSet;
   error?: string;
 }
@@ -330,24 +334,47 @@ export const store = {
     return path;
   },
 
-  async getDownloadUrl(blobPath: string, ttlMinutes = 10): Promise<string> {
+  async writeRunBinary(
+    runId: string,
+    runnerId: string,
+    ext: string,
+    contentType: string,
+    data: Buffer
+  ): Promise<string> {
     await ensureInfra();
+    const container = blobService().getContainerClient(config.uploadsContainer);
+    const safe = runnerId.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const path = `runs/${runId}/${safe}.${ext}`;
+    await container
+      .getBlockBlobClient(path)
+      .uploadData(data, { blobHTTPHeaders: { blobContentType: contentType } });
+    return path;
+  },
+
+  async getDownloadUrl(
+    blobPath: string,
+    opts: { ttlMinutes?: number; downloadFilename?: string; contentType?: string } = {}
+  ): Promise<string> {
+    await ensureInfra();
+    const ttlMinutes = opts.ttlMinutes ?? 10;
     const svc = blobService();
     const start = new Date(Date.now() - 60_000);
     const expiry = new Date(Date.now() + ttlMinutes * 60_000);
     const udk: UserDelegationKey = await svc.getUserDelegationKey(start, expiry);
-    const sas = generateBlobSASQueryParameters(
-      {
-        containerName: config.uploadsContainer,
-        blobName: blobPath,
-        permissions: BlobSASPermissions.parse('r'),
-        startsOn: start,
-        expiresOn: expiry,
-        protocol: 'https' as never
-      },
-      udk,
-      config.storageAccount
-    ).toString();
+    const sasParams: Parameters<typeof generateBlobSASQueryParameters>[0] = {
+      containerName: config.uploadsContainer,
+      blobName: blobPath,
+      permissions: BlobSASPermissions.parse('r'),
+      startsOn: start,
+      expiresOn: expiry,
+      protocol: 'https' as never
+    };
+    if (opts.downloadFilename) {
+      // Force browser download with the original filename + extension.
+      sasParams.contentDisposition = `attachment; filename="${opts.downloadFilename.replace(/"/g, '')}"`;
+    }
+    if (opts.contentType) sasParams.contentType = opts.contentType;
+    const sas = generateBlobSASQueryParameters(sasParams, udk, config.storageAccount).toString();
     return `${blobEndpoint()}/${config.uploadsContainer}/${blobPath}?${sas}`;
   }
 };

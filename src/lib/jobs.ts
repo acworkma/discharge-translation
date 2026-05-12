@@ -2,6 +2,7 @@ import { store } from './storage';
 import { resolveRunner } from './runners';
 import { scoreStub } from './scoring';
 import { extractText } from './extract';
+import { renderTranslated } from './render';
 
 // In-process async job runner. Acceptable for M2 (single replica). For
 // multi-replica or durable execution, replace with Service Bus + worker.
@@ -64,6 +65,22 @@ export async function startRun(runId: string): Promise<void> {
         }
         // Persist the translation as a blob (downloadable via SAS).
         await store.writeRunOutput(runId, result.runnerId, out.translatedText);
+        // Render in the original document format and persist alongside.
+        const rendered = await renderTranslated(
+          upload.filename,
+          upload.mimeType,
+          out.translatedText
+        );
+        const baseName = upload.filename.replace(/\.[^./\\]+$/, '');
+        const safeRunner = result.runnerId.replace(/[^a-zA-Z0-9._-]/g, '_');
+        const downloadName = `${baseName}.${upload.targetLang}.${safeRunner}.${rendered.ext}`;
+        const renderedPath = await store.writeRunBinary(
+          runId,
+          result.runnerId,
+          rendered.ext,
+          rendered.contentType,
+          rendered.buffer
+        );
         const scores = scoreStub(sourceText, out.translatedText);
         await store.updateRun(runId, (r) => {
           const t = r.results.find((x) => x.runnerId === result.runnerId);
@@ -75,6 +92,9 @@ export async function startRun(runId: string): Promise<void> {
             t.latencyMs = out.latencyMs;
             t.inputTokens = out.inputTokens;
             t.outputTokens = out.outputTokens;
+            t.outputBlobPath = renderedPath;
+            t.outputContentType = rendered.contentType;
+            t.outputFilename = downloadName;
             t.scores = scores;
           }
         });

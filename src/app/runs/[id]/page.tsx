@@ -13,6 +13,8 @@ interface RunnerResult {
   inputTokens?: number;
   outputTokens?: number;
   translatedText?: string;
+  outputBlobPath?: string;
+  outputFilename?: string;
   scores?: ScoreSet;
   error?: string;
 }
@@ -122,6 +124,14 @@ export default function RunDetail() {
               <span>↑ {fmtTokens(r.inputTokens)}</span>
               <span>↓ {fmtTokens(r.outputTokens)}</span>
             </div>
+            {r.outputBlobPath && (
+              <a
+                href={`/api/runs/${run.id}/download?runner=${encodeURIComponent(r.runnerId)}`}
+                className="inline-block text-xs bg-brand text-white px-3 py-1 rounded hover:bg-brand-dark"
+              >
+                Download {r.outputFilename ? r.outputFilename.split('.').pop()?.toUpperCase() : 'document'}
+              </a>
+            )}
             <div>
               <div className="text-xs text-slate-500 mb-1">Translation</div>
               <pre className="text-xs whitespace-pre-wrap bg-slate-50 border rounded p-2 max-h-72 overflow-auto">
