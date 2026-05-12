@@ -158,10 +158,10 @@ resource aif 'Microsoft.CognitiveServices/accounts@2024-10-01' = {
 // Built-in role IDs (subscription-scoped GUIDs).
 var roleIds = {
   storageBlobDataContributor: 'ba92f5b4-2d11-453d-a403-e96b0029c9fe'
-  storageTableDataContributor: '0a9a7e1f-b9d0-4cc4-a60d-0319b160aaf3'
+  storageTableDataContributor: '0a9a7e1f-b9d0-4cc4-a60d-0319b160aaa3'
   cognitiveServicesUser: 'a97b65f3-24c7-4388-baec-2e87135dc908'
   cognitiveServicesOpenAIUser: '5e0bd9bd-7b93-4f28-af87-19fc36ad61bd'
-  acrPull: '7f951dda-4ed3-11e8-9c2d-fa7ae01bbebc'
+  acrPull: '7f951dda-4ed3-4680-a7ca-43fe172d538d'
 }
 
 resource raBlob 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
