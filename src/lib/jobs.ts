@@ -44,6 +44,9 @@ export async function startRun(runId: string): Promise<void> {
             t.completedAt = Date.now();
             t.translatedText = out.translatedText;
             t.displayName = runner.displayName;
+            t.latencyMs = out.latencyMs;
+            t.inputTokens = out.inputTokens;
+            t.outputTokens = out.outputTokens;
             t.scores = scores;
           }
         });

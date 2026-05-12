@@ -1,7 +1,14 @@
 'use client';
 import { useEffect, useState } from 'react';
 
-interface RunnerOpt { id: string; displayName: string; kind: string; }
+interface RunnerOpt {
+  id: string;
+  displayName: string;
+  kind: string;
+  provider: string;
+  tier: string;
+  modelId?: string;
+}
 
 const TARGET_LANGS = [
   { code: 'es', label: 'Spanish' },
@@ -13,6 +20,23 @@ const TARGET_LANGS = [
   { code: 'pt', label: 'Portuguese' }
 ];
 
+const TIER_STYLES: Record<string, string> = {
+  flagship: 'bg-violet-100 text-violet-800',
+  balanced: 'bg-sky-100 text-sky-800',
+  budget: 'bg-emerald-100 text-emerald-800',
+  baseline: 'bg-slate-200 text-slate-700'
+};
+
+const PROVIDER_ORDER = ['azure', 'openai', 'mistral', 'meta', 'deepseek', 'other'];
+const PROVIDER_LABEL: Record<string, string> = {
+  azure: 'Azure Translator',
+  openai: 'OpenAI',
+  mistral: 'Mistral',
+  meta: 'Meta (Llama)',
+  deepseek: 'DeepSeek',
+  other: 'Other'
+};
+
 export default function UploadPage() {
   const [file, setFile] = useState<File | null>(null);
   const [targetLang, setTargetLang] = useState('es');
@@ -22,21 +46,29 @@ export default function UploadPage() {
   const [err, setErr] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch('/api/runners').then((r) => r.json()).then((d) => {
-      setRunners(d.runners || []);
-      // default-select translator + first foundry model
-      const def = new Set<string>();
-      const t = d.runners.find((x: RunnerOpt) => x.kind === 'translator');
-      if (t) def.add(t.id);
-      const f = d.runners.find((x: RunnerOpt) => x.kind === 'foundry');
-      if (f) def.add(f.id);
-      setSelected(def);
-    });
+    fetch('/api/runners')
+      .then((r) => r.json())
+      .then((d) => {
+        const list: RunnerOpt[] = d.runners || [];
+        setRunners(list);
+        // Default selection: Translator + first flagship (or first foundry)
+        const def = new Set<string>();
+        const t = list.find((x) => x.kind === 'translator');
+        if (t) def.add(t.id);
+        const flagship = list.find((x) => x.kind === 'foundry' && x.tier === 'flagship');
+        if (flagship) def.add(flagship.id);
+        else {
+          const f = list.find((x) => x.kind === 'foundry');
+          if (f) def.add(f.id);
+        }
+        setSelected(def);
+      });
   }, []);
 
   function toggle(id: string) {
     const next = new Set(selected);
-    next.has(id) ? next.delete(id) : next.add(id);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
     setSelected(next);
   }
 
@@ -44,7 +76,7 @@ export default function UploadPage() {
     e.preventDefault();
     setErr(null);
     if (!file) return setErr('Choose a file');
-    if (selected.size === 0) return setErr('Select at least one runner');
+    if (selected.size === 0) return setErr('Select at least one model');
     setBusy(true);
     try {
       const fd = new FormData();
@@ -60,15 +92,20 @@ export default function UploadPage() {
       }).then((r) => r.json());
       if (!run.id) throw new Error('Run start failed');
       window.location.href = `/runs/${run.id}`;
-    } catch (e: any) {
-      setErr(e.message || 'Failed');
+    } catch (e: unknown) {
+      setErr(e instanceof Error ? e.message : 'Failed');
     } finally {
       setBusy(false);
     }
   }
 
+  // Group runners by provider
+  const grouped = PROVIDER_ORDER
+    .map((p) => ({ provider: p, items: runners.filter((r) => r.provider === p) }))
+    .filter((g) => g.items.length > 0);
+
   return (
-    <div className="max-w-2xl mx-auto bg-white shadow rounded p-6 space-y-6">
+    <div className="max-w-3xl mx-auto bg-white shadow rounded p-6 space-y-6">
       <h1 className="text-xl font-semibold">New Translation Run</h1>
       <form onSubmit={submit} className="space-y-5">
         <div>
@@ -78,7 +115,9 @@ export default function UploadPage() {
             onChange={(e) => setFile(e.target.files?.[0] || null)}
             className="block w-full text-sm"
           />
-          <p className="text-xs text-slate-500 mt-1">PDF, DOCX, TXT, or images. PHI-safe: text is not logged.</p>
+          <p className="text-xs text-slate-500 mt-1">
+            PDF, DOCX, TXT, or images. PHI-safe: text is not logged.
+          </p>
         </div>
         <div>
           <label className="block text-sm font-medium mb-1">Target language</label>
@@ -93,16 +132,47 @@ export default function UploadPage() {
           </select>
         </div>
         <div>
-          <label className="block text-sm font-medium mb-2">Runners</label>
-          <div className="space-y-2">
-            {runners.map((r) => (
-              <label key={r.id} className="flex items-center gap-2 text-sm">
-                <input type="checkbox" checked={selected.has(r.id)} onChange={() => toggle(r.id)} />
-                <span>{r.displayName}</span>
-                <span className="text-xs text-slate-400">{r.id}</span>
-              </label>
+          <div className="flex items-center justify-between mb-2">
+            <label className="block text-sm font-medium">Models to compare</label>
+            <span className="text-xs text-slate-500">{selected.size} selected</span>
+          </div>
+          <div className="space-y-4">
+            {grouped.map((g) => (
+              <div key={g.provider}>
+                <div className="text-xs uppercase tracking-wide text-slate-500 mb-1">
+                  {PROVIDER_LABEL[g.provider] || g.provider}
+                </div>
+                <div className="grid sm:grid-cols-2 gap-2">
+                  {g.items.map((r) => {
+                    const checked = selected.has(r.id);
+                    return (
+                      <label
+                        key={r.id}
+                        className={`flex items-center gap-2 border rounded px-3 py-2 cursor-pointer text-sm ${
+                          checked ? 'bg-sky-50 border-sky-300' : 'bg-white border-slate-200'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => toggle(r.id)}
+                          className="shrink-0"
+                        />
+                        <span className="flex-1 truncate">{r.displayName.replace(/^Foundry · /, '')}</span>
+                        <span
+                          className={`shrink-0 px-1.5 py-0.5 rounded text-[10px] uppercase font-semibold ${
+                            TIER_STYLES[r.tier] || 'bg-slate-100 text-slate-700'
+                          }`}
+                        >
+                          {r.tier}
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
             ))}
-            {runners.length === 0 && <p className="text-sm text-slate-400">Loading...</p>}
+            {runners.length === 0 && <p className="text-sm text-slate-400">Loading models…</p>}
           </div>
         </div>
         {err && <p className="text-red-600 text-sm">{err}</p>}
@@ -110,7 +180,7 @@ export default function UploadPage() {
           disabled={busy}
           className="bg-brand text-white px-4 py-2 rounded hover:bg-brand-dark disabled:opacity-50"
         >
-          {busy ? 'Starting...' : 'Upload & Run'}
+          {busy ? 'Starting…' : `Upload & Run (${selected.size} models)`}
         </button>
       </form>
     </div>

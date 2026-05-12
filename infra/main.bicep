@@ -21,6 +21,12 @@ param containerImage string = ''
 @secure()
 param appPassword string = 'fr24'
 
+@description('Azure AI Foundry inference endpoint (e.g. https://foundry-acw.services.ai.azure.com/models)')
+param foundryEndpoint string = 'https://foundry-acw.services.ai.azure.com/models'
+
+@description('JSON array of available Foundry model deployments for the UI picker')
+param foundryModelsJson string = '[{"id":"gpt-5.2","provider":"openai","tier":"flagship"},{"id":"gpt-4.1","provider":"openai","tier":"balanced"},{"id":"gpt-4.1-mini-601090","provider":"openai","tier":"budget","display":"gpt-4.1-mini"},{"id":"Mistral-Large-3","provider":"mistral","tier":"flagship"},{"id":"Llama-3.3-70B-Instruct","provider":"meta","tier":"balanced"},{"id":"DeepSeek-V3.2","provider":"deepseek","tier":"flagship"}]'
+
 var regionShort = 'eus2'
 var base = '${workload}-${env}-${regionShort}-${instance}'
 var baseNoDash = toLower('${workload}${env}${regionShort}${instance}')
@@ -34,7 +40,6 @@ var names = {
   st: 'st${baseNoDash}'
   kv: 'kv-${base}'
   cogTranslator: 'cog-${workload}-trn-${env}-${regionShort}-${instance}'
-  aiFoundry: 'aif-${base}'
   uami: 'id-${base}'
 }
 
@@ -140,19 +145,8 @@ resource translator 'Microsoft.CognitiveServices/accounts@2024-04-01-preview' = 
   }
 }
 
-// Azure AI Foundry (AIServices kind exposes the unified inference endpoint).
-resource aif 'Microsoft.CognitiveServices/accounts@2024-10-01' = {
-  name: names.aiFoundry
-  location: location
-  kind: 'AIServices'
-  sku: { name: 'S0' }
-  identity: { type: 'SystemAssigned' }
-  properties: {
-    customSubDomainName: names.aiFoundry
-    publicNetworkAccess: 'Enabled'
-    disableLocalAuth: false
-  }
-}
+// Azure AI Foundry is provisioned out-of-band (foundry-acw in rg-foundry). Cross-RG role
+// assignments for the UAMI on that account are made by the deploy workflow (az role assignment).
 
 // --- RBAC: grant the workload UAMI access to the data planes -------------
 // Built-in role IDs (subscription-scoped GUIDs).
@@ -160,7 +154,6 @@ var roleIds = {
   storageBlobDataContributor: 'ba92f5b4-2d11-453d-a403-e96b0029c9fe'
   storageTableDataContributor: '0a9a7e1f-b9d0-4cc4-a60d-0319b160aaa3'
   cognitiveServicesUser: 'a97b65f3-24c7-4388-baec-2e87135dc908'
-  cognitiveServicesOpenAIUser: '5e0bd9bd-7b93-4f28-af87-19fc36ad61bd'
   acrPull: '7f951dda-4ed3-4680-a7ca-43fe172d538d'
 }
 
@@ -189,16 +182,6 @@ resource raTranslator 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   name: guid(translator.id, uami.id, roleIds.cognitiveServicesUser)
   properties: {
     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roleIds.cognitiveServicesUser)
-    principalId: uami.properties.principalId
-    principalType: 'ServicePrincipal'
-  }
-}
-
-resource raFoundry 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  scope: aif
-  name: guid(aif.id, uami.id, roleIds.cognitiveServicesOpenAIUser)
-  properties: {
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roleIds.cognitiveServicesOpenAIUser)
     principalId: uami.properties.principalId
     principalType: 'ServicePrincipal'
   }
@@ -260,8 +243,8 @@ resource ca 'Microsoft.App/containerApps@2024-03-01' = if (!empty(containerImage
             { name: 'AZURE_CLIENT_ID', value: uami.properties.clientId }
             { name: 'AZURE_TRANSLATOR_ENDPOINT', value: translator.properties.endpoint }
             { name: 'AZURE_TRANSLATOR_REGION', value: location }
-            { name: 'AZURE_FOUNDRY_ENDPOINT', value: '${aif.properties.endpoint}models' }
-            { name: 'AZURE_FOUNDRY_MODELS', value: 'gpt-4o,gpt-4o-mini,phi-3-medium' }
+            { name: 'AZURE_FOUNDRY_ENDPOINT', value: foundryEndpoint }
+            { name: 'AZURE_FOUNDRY_MODELS_JSON', value: foundryModelsJson }
             { name: 'AZURE_STORAGE_ACCOUNT', value: storage.name }
             { name: 'AZURE_STORAGE_UPLOADS_CONTAINER', value: uploadsContainer.name }
             { name: 'AZURE_STORAGE_UPLOADS_TABLE', value: uploadsTable.name }

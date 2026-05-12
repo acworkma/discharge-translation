@@ -29,6 +29,9 @@ export interface RunnerResult {
   status: RunStatus;
   startedAt?: number;
   completedAt?: number;
+  latencyMs?: number;
+  inputTokens?: number;
+  outputTokens?: number;
   translatedText?: string;
   scores?: ScoreSet;
   error?: string;

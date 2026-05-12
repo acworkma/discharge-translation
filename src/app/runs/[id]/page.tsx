@@ -3,7 +3,19 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 
 interface ScoreSet { clinicalFidelity: number; terminologyConsistency: number; formattingPreservation: number; readability: number; overall: number; }
-interface RunnerResult { runnerId: string; displayName: string; status: string; translatedText?: string; scores?: ScoreSet; error?: string; }
+interface RunnerResult {
+  runnerId: string;
+  displayName: string;
+  status: string;
+  startedAt?: number;
+  completedAt?: number;
+  latencyMs?: number;
+  inputTokens?: number;
+  outputTokens?: number;
+  translatedText?: string;
+  scores?: ScoreSet;
+  error?: string;
+}
 interface Run { id: string; status: string; createdAt: number; results: RunnerResult[]; }
 interface Upload { id: string; filename: string; sourceLang: string; targetLang: string; }
 
@@ -21,6 +33,17 @@ function scoreCell(n?: number) {
   if (n == null) return <span className="text-slate-300">—</span>;
   const c = n >= 0.9 ? 'text-emerald-700' : n >= 0.8 ? 'text-amber-700' : 'text-red-700';
   return <span className={`font-semibold ${c}`}>{n.toFixed(2)}</span>;
+}
+
+function fmtMs(ms?: number) {
+  if (ms == null) return '—';
+  if (ms < 1000) return `${ms}ms`;
+  return `${(ms / 1000).toFixed(1)}s`;
+}
+
+function fmtTokens(n?: number) {
+  if (n == null) return '—';
+  return n.toLocaleString();
 }
 
 export default function RunDetail() {
@@ -51,7 +74,7 @@ export default function RunDetail() {
         <div>
           <h1 className="text-2xl font-semibold">Run {run.id.slice(0, 8)}</h1>
           <p className="text-sm text-slate-500">
-            {upload?.filename} · {upload?.sourceLang} → {upload?.targetLang}
+            {upload?.filename} · {upload?.sourceLang} → {upload?.targetLang} · {run.results.length} models
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -60,23 +83,48 @@ export default function RunDetail() {
         </div>
       </div>
 
-      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="bg-white rounded shadow overflow-hidden">
+        <table className="w-full text-sm">
+          <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-600">
+            <tr>
+              <th className="text-left px-3 py-2">Model</th>
+              <th className="px-3 py-2">Status</th>
+              <th className="px-3 py-2">Latency</th>
+              <th className="px-3 py-2">Input tok</th>
+              <th className="px-3 py-2">Output tok</th>
+              <th className="px-3 py-2">Overall</th>
+            </tr>
+          </thead>
+          <tbody>
+            {run.results.map((r) => (
+              <tr key={r.runnerId} className="border-t">
+                <td className="px-3 py-2 font-medium">{r.displayName}</td>
+                <td className="px-3 py-2 text-center">{statusBadge(r.status)}</td>
+                <td className="px-3 py-2 text-center">{fmtMs(r.latencyMs)}</td>
+                <td className="px-3 py-2 text-center">{fmtTokens(r.inputTokens)}</td>
+                <td className="px-3 py-2 text-center">{fmtTokens(r.outputTokens)}</td>
+                <td className="px-3 py-2 text-center">{scoreCell(r.scores?.overall)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="grid md:grid-cols-2 gap-4">
         {run.results.map((r) => (
           <div key={r.runnerId} className="bg-white rounded shadow p-4 space-y-3">
             <div className="flex items-center justify-between">
               <h2 className="font-medium">{r.displayName}</h2>
               {statusBadge(r.status)}
             </div>
-            <div className="grid grid-cols-5 gap-2 text-xs text-center">
-              <div><div className="text-slate-500">Clin</div>{scoreCell(r.scores?.clinicalFidelity)}</div>
-              <div><div className="text-slate-500">Term</div>{scoreCell(r.scores?.terminologyConsistency)}</div>
-              <div><div className="text-slate-500">Fmt</div>{scoreCell(r.scores?.formattingPreservation)}</div>
-              <div><div className="text-slate-500">Read</div>{scoreCell(r.scores?.readability)}</div>
-              <div><div className="text-slate-500">Overall</div>{scoreCell(r.scores?.overall)}</div>
+            <div className="text-xs text-slate-500 flex gap-4">
+              <span>⏱ {fmtMs(r.latencyMs)}</span>
+              <span>↑ {fmtTokens(r.inputTokens)}</span>
+              <span>↓ {fmtTokens(r.outputTokens)}</span>
             </div>
             <div>
-              <div className="text-xs text-slate-500 mb-1">Translation preview</div>
-              <pre className="text-xs whitespace-pre-wrap bg-slate-50 border rounded p-2 max-h-48 overflow-auto">
+              <div className="text-xs text-slate-500 mb-1">Translation</div>
+              <pre className="text-xs whitespace-pre-wrap bg-slate-50 border rounded p-2 max-h-72 overflow-auto">
 {r.translatedText || (r.status === 'running' ? '…translating…' : r.error || '')}
               </pre>
             </div>

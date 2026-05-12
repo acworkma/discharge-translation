@@ -18,6 +18,9 @@ export interface RunnerInput {
 
 export interface RunnerOutput {
   translatedText: string;
+  latencyMs: number;
+  inputTokens?: number;
+  outputTokens?: number;
 }
 
 export interface Runner {
@@ -63,6 +66,7 @@ export const azureTranslator: Runner = {
     if (!config.translatorEndpoint) {
       throw new Error('AZURE_TRANSLATOR_ENDPOINT is not configured');
     }
+    const t0 = Date.now();
     const base = config.translatorEndpoint.replace(/\/+$/, '');
     const params = new URLSearchParams({ 'api-version': '3.0', to: targetLang });
     if (sourceLang) params.set('from', sourceLang);
@@ -92,7 +96,7 @@ export const azureTranslator: Runner = {
       translatedChunks.push(piece);
     }
 
-    return { translatedText: translatedChunks.join('\n\n') };
+    return { translatedText: translatedChunks.join('\n\n'), latencyMs: Date.now() - t0 };
   }
 };
 
@@ -149,12 +153,15 @@ function foundryClient() {
 }
 
 export function foundryRunner(modelId: string): Runner {
+  const info = config.foundryModels.find((m) => m.id === modelId);
+  const display = info?.display || modelId;
   return {
     id: `foundry:${modelId}`,
-    displayName: `Azure AI Foundry / ${modelId}`,
+    displayName: `Foundry · ${display}`,
 
     async translate({ text, sourceLang, targetLang }) {
       const client = foundryClient();
+      const t0 = Date.now();
       const userPrompt =
         `Translate the following ${sourceLang || 'source'} discharge document into ${targetLang}.\n\n` +
         '--- BEGIN DOCUMENT ---\n' + text + '\n--- END DOCUMENT ---';
@@ -178,12 +185,20 @@ export function foundryRunner(modelId: string): Runner {
 
       const choice = response.body.choices?.[0];
       const content = choice?.message?.content ?? '';
-      return { translatedText: typeof content === 'string' ? content : JSON.stringify(content) };
+      const usage = response.body.usage as
+        | { prompt_tokens?: number; completion_tokens?: number }
+        | undefined;
+      return {
+        translatedText: typeof content === 'string' ? content : JSON.stringify(content),
+        latencyMs: Date.now() - t0,
+        inputTokens: usage?.prompt_tokens,
+        outputTokens: usage?.completion_tokens
+      };
     }
   };
 }
 
-export function listAvailableFoundryModels(): string[] {
+export function listAvailableFoundryModels() {
   return config.foundryModels;
 }
 

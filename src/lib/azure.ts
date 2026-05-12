@@ -30,9 +30,47 @@ export const config = {
 
   foundryEndpoint: process.env.AZURE_FOUNDRY_ENDPOINT || '',
   foundryApiKey: process.env.AZURE_FOUNDRY_API_KEY || '',
-  foundryModels: (process.env.AZURE_FOUNDRY_MODELS || 'gpt-4o,gpt-4o-mini,phi-3-medium')
-    .split(',').map((s) => s.trim()).filter(Boolean)
+  foundryModels: parseFoundryModels()
 };
+
+export interface FoundryModelInfo {
+  /** Deployment name in the foundry account (used as the `model` field in inference calls). */
+  id: string;
+  /** Human-friendly label; falls back to id. */
+  display?: string;
+  /** openai | mistral | meta | deepseek | other */
+  provider: string;
+  /** flagship | balanced | budget */
+  tier: string;
+}
+
+function parseFoundryModels(): FoundryModelInfo[] {
+  const raw = process.env.AZURE_FOUNDRY_MODELS_JSON;
+  if (raw) {
+    try {
+      const arr = JSON.parse(raw);
+      if (Array.isArray(arr)) {
+        return arr
+          .filter((x) => x && typeof x.id === 'string')
+          .map((x) => ({
+            id: String(x.id),
+            display: x.display ? String(x.display) : undefined,
+            provider: String(x.provider || 'other'),
+            tier: String(x.tier || 'balanced')
+          }));
+      }
+    } catch {
+      // fall through
+    }
+  }
+  // Legacy comma-separated fallback
+  const csv = process.env.AZURE_FOUNDRY_MODELS || '';
+  return csv
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .map((id) => ({ id, provider: 'other', tier: 'balanced' }));
+}
 
 export function blobEndpoint(): string {
   if (!config.storageAccount) throw new Error('AZURE_STORAGE_ACCOUNT not configured');
