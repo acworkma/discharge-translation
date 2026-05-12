@@ -1,8 +1,8 @@
 // Render translated text back into the original document format.
 // PDF -> PDF, DOCX -> DOCX, TXT/MD/anything else -> TXT.
-
-import { Document, Packer, Paragraph, TextRun } from 'docx';
-import PDFDocument from 'pdfkit';
+//
+// Heavy parsers (docx, pdfkit) are dynamically imported inside the renderers
+// so they don't run module-init during Next.js's build-time page-data scan.
 
 export interface RenderedDoc {
   buffer: Buffer;
@@ -35,9 +35,10 @@ function renderTxt(text: string): RenderedDoc {
 }
 
 async function renderDocx(text: string): Promise<RenderedDoc> {
+  const { Document, Packer, Paragraph, TextRun } = await import('docx');
   const paragraphs = text.split(/\n{2,}/).map((block) => {
     const lines = block.split(/\n/);
-    const runs: TextRun[] = [];
+    const runs: InstanceType<typeof TextRun>[] = [];
     lines.forEach((line, i) => {
       if (i > 0) runs.push(new TextRun({ break: 1 }));
       runs.push(new TextRun(line));
@@ -58,7 +59,8 @@ async function renderDocx(text: string): Promise<RenderedDoc> {
   };
 }
 
-function renderPdf(text: string): Promise<RenderedDoc> {
+async function renderPdf(text: string): Promise<RenderedDoc> {
+  const PDFDocument = (await import('pdfkit')).default;
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({ size: 'LETTER', margin: 54 });
     const chunks: Buffer[] = [];
@@ -72,8 +74,6 @@ function renderPdf(text: string): Promise<RenderedDoc> {
     );
     doc.on('error', reject);
 
-    // Use built-in Helvetica (no font file needed). Falls back gracefully on
-    // characters outside Latin-1; Unicode coverage is limited by the font.
     doc.font('Helvetica').fontSize(11);
     const blocks = text.split(/\n{2,}/);
     blocks.forEach((block, i) => {
