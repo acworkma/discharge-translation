@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { listAvailableFoundryModels, azureTranslator } from '@/lib/runners';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   return NextResponse.json({
     runners: [
