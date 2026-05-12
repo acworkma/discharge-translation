@@ -1,0 +1,12 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "location":  { "value": "eastus2" },
+    "workload":  { "value": "dt" },
+    "env":       { "value": "prod" },
+    "instance":  { "value": "001" },
+    "containerImage": { "value": "" },
+    "appPassword":    { "value": "fr24" }
+  }
+}

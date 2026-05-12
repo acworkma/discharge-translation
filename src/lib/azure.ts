@@ -1,0 +1,48 @@
+// Shared Azure config + credential.
+// Uses DefaultAzureCredential so the same code works with:
+//   - User-Assigned Managed Identity in Azure Container Apps (AZURE_CLIENT_ID set)
+//   - `az login` developer credential locally
+//   - Workload Identity in CI
+
+import { DefaultAzureCredential, type TokenCredential } from '@azure/identity';
+
+let _cred: TokenCredential | null = null;
+
+export function credential(): TokenCredential {
+  if (!_cred) {
+    _cred = new DefaultAzureCredential({
+      managedIdentityClientId: process.env.AZURE_CLIENT_ID
+    });
+  }
+  return _cred;
+}
+
+export const config = {
+  storageAccount: process.env.AZURE_STORAGE_ACCOUNT || '',
+  uploadsContainer: process.env.AZURE_STORAGE_UPLOADS_CONTAINER || 'uploads',
+  uploadsTable: process.env.AZURE_STORAGE_UPLOADS_TABLE || 'uploads',
+  runsTable: process.env.AZURE_STORAGE_RUNS_TABLE || 'runs',
+
+  translatorEndpoint: process.env.AZURE_TRANSLATOR_ENDPOINT || '',
+  translatorRegion: process.env.AZURE_TRANSLATOR_REGION || 'eastus2',
+  // Optional: if set, key auth is used instead of MI (handy for local dev).
+  translatorKey: process.env.AZURE_TRANSLATOR_KEY || '',
+
+  foundryEndpoint: process.env.AZURE_FOUNDRY_ENDPOINT || '',
+  foundryApiKey: process.env.AZURE_FOUNDRY_API_KEY || '',
+  foundryModels: (process.env.AZURE_FOUNDRY_MODELS || 'gpt-4o,gpt-4o-mini,phi-3-medium')
+    .split(',').map((s) => s.trim()).filter(Boolean)
+};
+
+export function blobEndpoint(): string {
+  if (!config.storageAccount) throw new Error('AZURE_STORAGE_ACCOUNT not configured');
+  return `https://${config.storageAccount}.blob.core.windows.net`;
+}
+
+export function tableEndpoint(): string {
+  if (!config.storageAccount) throw new Error('AZURE_STORAGE_ACCOUNT not configured');
+  return `https://${config.storageAccount}.table.core.windows.net`;
+}
+
+// Cognitive Services data plane scope used for AAD-based Translator calls.
+export const COGNITIVE_SERVICES_SCOPE = 'https://cognitiveservices.azure.com/.default';
