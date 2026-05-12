@@ -67,11 +67,19 @@ export const azureTranslator: Runner = {
       throw new Error('AZURE_TRANSLATOR_ENDPOINT is not configured');
     }
     const t0 = Date.now();
+    // AAD bearer auth requires the resource's custom-subdomain endpoint with a
+    // /translator/text/v3.0 path. The global api.cognitive.microsofttranslator.com
+    // endpoint only accepts subscription-key auth.
     const base = config.translatorEndpoint.replace(/\/+$/, '');
+    const isCustomSubdomain = /\.cognitiveservices\.azure\.com$/i.test(new URL(base).host);
+    const usingAad = !config.translatorKey;
+    const path = (usingAad || isCustomSubdomain)
+      ? `${base}/translator/text/v3.0/translate`
+      : `${base}/translate`;
     const params = new URLSearchParams({ 'api-version': '3.0', to: targetLang });
     if (sourceLang) params.set('from', sourceLang);
 
-    const url = `${base}/translate?${params.toString()}`;
+    const url = `${path}?${params.toString()}`;
     const headers = await translatorAuthHeaders();
 
     // The v3 endpoint enforces a per-request character limit (~50k). Chunk on
@@ -166,6 +174,7 @@ export function foundryRunner(modelId: string): Runner {
         `Translate the following ${sourceLang || 'source'} discharge document into ${targetLang}.\n\n` +
         '--- BEGIN DOCUMENT ---\n' + text + '\n--- END DOCUMENT ---';
 
+      const isReasoningModel = /^(gpt-5|o[0-9])/i.test(modelId);
       const response = await client.path('/chat/completions').post({
         body: {
           model: modelId,
@@ -173,8 +182,10 @@ export function foundryRunner(modelId: string): Runner {
             { role: 'system', content: SYSTEM_PROMPT },
             { role: 'user', content: userPrompt }
           ],
-          temperature: 0.1,
-          max_tokens: 4096
+          // gpt-5.x and o-series only accept temperature=1 and max_completion_tokens.
+          ...(isReasoningModel
+            ? { max_completion_tokens: 8192 }
+            : { temperature: 0.1, max_tokens: 4096 })
         }
       });
 

@@ -241,7 +241,7 @@ resource ca 'Microsoft.App/containerApps@2024-03-01' = if (!empty(containerImage
           env: [
             { name: 'APP_PASSWORD', secretRef: 'app-password' }
             { name: 'AZURE_CLIENT_ID', value: uami.properties.clientId }
-            { name: 'AZURE_TRANSLATOR_ENDPOINT', value: translator.properties.endpoint }
+            { name: 'AZURE_TRANSLATOR_ENDPOINT', value: 'https://${names.cogTranslator}.cognitiveservices.azure.com' }
             { name: 'AZURE_TRANSLATOR_REGION', value: location }
             { name: 'AZURE_FOUNDRY_ENDPOINT', value: foundryEndpoint }
             { name: 'AZURE_FOUNDRY_MODELS_JSON', value: foundryModelsJson }
