@@ -182,9 +182,11 @@ export function foundryRunner(modelId: string): Runner {
             { role: 'system', content: SYSTEM_PROMPT },
             { role: 'user', content: userPrompt }
           ],
-          // gpt-5.x and o-series only accept temperature=1 and max_completion_tokens.
+          // gpt-5.x and o-series are reasoning models: they spend a large
+          // (hidden) chunk of completion tokens on reasoning before producing
+          // visible output. Budget enough headroom for both.
           ...(isReasoningModel
-            ? { max_completion_tokens: 8192 }
+            ? { max_completion_tokens: 32_000 }
             : { temperature: 0.1, max_tokens: 4096 })
         }
       });
@@ -197,13 +199,22 @@ export function foundryRunner(modelId: string): Runner {
       const choice = response.body.choices?.[0];
       const content = choice?.message?.content ?? '';
       const usage = response.body.usage as
-        | { prompt_tokens?: number; completion_tokens?: number }
+        | {
+            prompt_tokens?: number;
+            completion_tokens?: number;
+            completion_tokens_details?: { reasoning_tokens?: number };
+          }
         | undefined;
+      const reasoning = usage?.completion_tokens_details?.reasoning_tokens;
+      const visible =
+        usage?.completion_tokens != null && reasoning != null
+          ? Math.max(0, usage.completion_tokens - reasoning)
+          : usage?.completion_tokens;
       return {
         translatedText: typeof content === 'string' ? content : JSON.stringify(content),
         latencyMs: Date.now() - t0,
         inputTokens: usage?.prompt_tokens,
-        outputTokens: usage?.completion_tokens
+        outputTokens: visible
       };
     }
   };
