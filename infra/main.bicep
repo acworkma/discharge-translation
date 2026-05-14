@@ -81,6 +81,13 @@ resource storage 'Microsoft.Storage/storageAccounts@2023-05-01' = {
     allowBlobPublicAccess: false
     supportsHttpsTrafficOnly: true
     allowSharedKeyAccess: false
+    // ACA without VNet integration must reach storage over the public
+    // endpoint. AAD still required (allowSharedKeyAccess:false above).
+    publicNetworkAccess: 'Enabled'
+    networkAcls: {
+      defaultAction: 'Allow'
+      bypass: 'AzureServices'
+    }
     encryption: {
       services: {
         blob: { enabled: true }
