@@ -28,9 +28,25 @@ export const config = {
   // Optional: if set, key auth is used instead of MI (handy for local dev).
   translatorKey: process.env.AZURE_TRANSLATOR_KEY || '',
 
+  // Azure AI Document Translation (async, format-preserving NMT). May share
+  // the same Translator resource; if unset we fall back to translatorEndpoint.
+  docTranslatorEndpoint:
+    process.env.AZURE_DOC_TRANSLATOR_ENDPOINT ||
+    process.env.AZURE_TRANSLATOR_ENDPOINT ||
+    '',
+
   foundryEndpoint: process.env.AZURE_FOUNDRY_ENDPOINT || '',
   foundryApiKey: process.env.AZURE_FOUNDRY_API_KEY || '',
-  foundryModels: parseFoundryModels()
+  foundryModels: parseFoundryModels(),
+
+  // Embeddings deployment used by the meaning-fidelity scorer (back-translation
+  // cosine, ask3 §5). Default is text-embedding-3-large; swap to a successor
+  // (text-embedding-4 / GPT-5 embedding) via env when it reaches the region.
+  embeddingDeployment:
+    process.env.AZURE_EMBEDDING_DEPLOYMENT || 'text-embedding-3-large',
+
+  // Judge model for the SafetyScore stub (ask3 §13 Day-1).
+  judgeModel: process.env.AZURE_JUDGE_MODEL || 'gpt-5-mini'
 };
 
 export interface FoundryModelInfo {

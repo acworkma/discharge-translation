@@ -1,0 +1,51 @@
+# Hospital Discharge Instructions
+
+**Patient:** Jane Doe
+**MRN:** 100-200-300
+**Discharge date:** 2025-03-14
+**Discharging provider:** Dr. M. Chen
+
+## Emergency
+
+Call 911 or go to the nearest emergency department for severe symptoms.
+
+## Follow-up
+
+- Primary care: Dr. Smith on 2025-03-21 at 10:30 AM.
+- Pulmonology: Dr. Patel on 2025-04-02 at 2:00 PM.
+
+## Diagnosis
+
+- Community-acquired pneumonia (ICD-10: J18.9)
+- Type 2 diabetes mellitus, well controlled (ICD-10: E11.9)
+
+## When to call your doctor
+
+Call your doctor immediately if you experience:
+
+- Fever above 101°F (38.3°C) that lasts more than 24 hours.
+- Shortness of breath at rest.
+- Chest pain or pressure.
+- Coughing up blood.
+
+## Diet
+
+- Drink at least 8 glasses (2 liters) of water per day.
+- Limit caffeine to 1 cup per day.
+- Continue your regular diabetic diet.
+
+## Activity
+
+1. Rest at home for the next 3 days.
+2. Walk for 10 minutes twice daily once fever resolves.
+3. Do not drive while taking opioid medication.
+4. No heavy lifting (over 10 pounds) for 7 days.
+
+## Medications
+
+| Medication | Dose | Frequency | Duration |
+| --- | --- | --- | --- |
+| Amoxicillin | 500 mg | Every 8 hours | 7 days |
+| Albuterol inhaler | 90 mcg | 2 puffs every 4 hours as needed | 14 days |
+| Metformin | 1000 mg | Twice daily with meals | Continue |
+| Acetaminophen | 650 mg | Every 6 hours as needed for fever | As needed |

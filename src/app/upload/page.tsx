@@ -10,14 +10,13 @@ interface RunnerOpt {
   modelId?: string;
 }
 
-const TARGET_LANGS = [
+// Day-1 demo language presets (ask2 §10, top 5 by patient volume).
+const TARGET_LANGS: Array<{ code: string; label: string }> = [
   { code: 'es', label: 'Spanish' },
-  { code: 'fr', label: 'French' },
-  { code: 'zh-Hans', label: 'Chinese (Simplified)' },
   { code: 'vi', label: 'Vietnamese' },
+  { code: 'zh-Hans', label: 'Mandarin (Simplified)' },
   { code: 'ar', label: 'Arabic' },
-  { code: 'ru', label: 'Russian' },
-  { code: 'pt', label: 'Portuguese' }
+  { code: 'tl', label: 'Tagalog' }
 ];
 
 const TIER_STYLES: Record<string, string> = {
@@ -29,7 +28,7 @@ const TIER_STYLES: Record<string, string> = {
 
 const PROVIDER_ORDER = ['azure', 'openai', 'mistral', 'meta', 'deepseek', 'other'];
 const PROVIDER_LABEL: Record<string, string> = {
-  azure: 'Azure Translator',
+  azure: 'Azure (NMT baseline)',
   openai: 'OpenAI',
   mistral: 'Mistral',
   meta: 'Meta (Llama)',
@@ -51,10 +50,9 @@ export default function UploadPage() {
       .then((d) => {
         const list: RunnerOpt[] = d.runners || [];
         setRunners(list);
-        // Default selection: Translator + first flagship (or first foundry)
+        // Default selection: all Azure baselines + first flagship Foundry.
         const def = new Set<string>();
-        const t = list.find((x) => x.kind === 'translator');
-        if (t) def.add(t.id);
+        for (const r of list) if (r.provider === 'azure') def.add(r.id);
         const flagship = list.find((x) => x.kind === 'foundry' && x.tier === 'flagship');
         if (flagship) def.add(flagship.id);
         else {
@@ -99,7 +97,6 @@ export default function UploadPage() {
     }
   }
 
-  // Group runners by provider
   const grouped = PROVIDER_ORDER
     .map((p) => ({ provider: p, items: runners.filter((r) => r.provider === p) }))
     .filter((g) => g.items.length > 0);
@@ -114,9 +111,10 @@ export default function UploadPage() {
             type="file"
             onChange={(e) => setFile(e.target.files?.[0] || null)}
             className="block w-full text-sm"
+            accept=".txt,.md,.pdf,.docx,text/plain,text/markdown,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
           />
           <p className="text-xs text-slate-500 mt-1">
-            PDF, DOCX, TXT, or images. PHI-safe: text is not logged.
+            TXT, MD, PDF (text-extractable), or DOCX. PHI-safe: text is not logged.
           </p>
         </div>
         <div>
@@ -133,7 +131,7 @@ export default function UploadPage() {
         </div>
         <div>
           <div className="flex items-center justify-between mb-2">
-            <label className="block text-sm font-medium">Models to compare</label>
+            <label className="block text-sm font-medium">Engines to compare</label>
             <span className="text-xs text-slate-500">{selected.size} selected</span>
           </div>
           <div className="space-y-4">
@@ -158,7 +156,9 @@ export default function UploadPage() {
                           onChange={() => toggle(r.id)}
                           className="shrink-0"
                         />
-                        <span className="flex-1 truncate">{r.displayName.replace(/^Foundry · /, '')}</span>
+                        <span className="flex-1 truncate">
+                          {r.displayName.replace(/^Foundry · /, '')}
+                        </span>
                         <span
                           className={`shrink-0 px-1.5 py-0.5 rounded text-[10px] uppercase font-semibold ${
                             TIER_STYLES[r.tier] || 'bg-slate-100 text-slate-700'
@@ -172,7 +172,7 @@ export default function UploadPage() {
                 </div>
               </div>
             ))}
-            {runners.length === 0 && <p className="text-sm text-slate-400">Loading models…</p>}
+            {runners.length === 0 && <p className="text-sm text-slate-400">Loading engines…</p>}
           </div>
         </div>
         {err && <p className="text-red-600 text-sm">{err}</p>}
@@ -180,7 +180,7 @@ export default function UploadPage() {
           disabled={busy}
           className="bg-brand text-white px-4 py-2 rounded hover:bg-brand-dark disabled:opacity-50"
         >
-          {busy ? 'Starting…' : `Upload & Run (${selected.size} models)`}
+          {busy ? 'Starting…' : `Upload & Run (${selected.size} engines)`}
         </button>
       </form>
     </div>

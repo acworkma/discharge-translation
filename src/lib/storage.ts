@@ -15,11 +15,59 @@ import { credential, config, blobEndpoint, tableEndpoint } from './azure';
 
 export type RunStatus = 'queued' | 'running' | 'succeeded' | 'failed';
 
+/** Composite-Translation-Quality-Score outcome (ask3 §7). */
+export type CtqsDecision = 'auto_publish' | 'human_review' | 'reject';
+
+/** Critical-error severities (ask3 §6). */
+export type CriticalSeverity = 'low' | 'medium' | 'high';
+
+export interface CriticalError {
+  kind: 'numeric_mismatch' | 'dose_change' | 'negation_drift';
+  severity: CriticalSeverity;
+  detail: string;
+}
+
+export interface FormatBreakdown {
+  /** 0–100. */
+  score: number;
+  headingOrder: number;
+  headingCount: number;
+  bulletCount: number;
+  numberedCount: number;
+  tableCount: number;
+  tableShape: number;
+  paragraphCount: number;
+  placeholders: number;
+}
+
+export interface MeaningBreakdown {
+  /** 0–100. */
+  score: number;
+  /** Mean cosine similarity across aligned source/back-translation segments. */
+  meanCosine: number;
+  /** Minimum per-segment cosine (the weak spot). */
+  minCosine: number;
+  segmentsCompared: number;
+}
+
+export interface SafetyBreakdown {
+  /** 0–100 (mapped from 1–5 LLM-judge score). */
+  score: number;
+  raw: number; // 1..5
+  rationale: string;
+}
+
 export interface ScoreSet {
-  clinicalFidelity: number;
-  terminologyConsistency: number;
-  formattingPreservation: number;
-  readability: number;
+  /** Composite Translation Quality Score 0–100. */
+  ctqs: number;
+  decision: CtqsDecision;
+  format: FormatBreakdown;
+  meaning: MeaningBreakdown;
+  safety: SafetyBreakdown;
+  criticalErrors: CriticalError[];
+  /** Whether any critical-error rule fired at high severity. */
+  criticalGateFailed: boolean;
+  /** Legacy field kept so the existing UI keeps rendering during the rollout. */
   overall: number;
 }
 

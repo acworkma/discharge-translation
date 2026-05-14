@@ -1,11 +1,20 @@
-import { store } from './storage';
-import { resolveRunner } from './runners';
-import { scoreStub } from './scoring';
-import { extractText } from './extract';
-import { renderTranslated } from './render';
+// In-process job runner: extract → translate (per-runner) → render → score.
+// Acceptable for single-replica HoK demo; replace with Service Bus + worker
+// for multi-replica or durable execution.
+//
+// PHI safety: document text is never logged. Only IDs/lengths/status appear.
 
-// In-process async job runner. Acceptable for M2 (single replica). For
-// multi-replica or durable execution, replace with Service Bus + worker.
+import { store } from './storage';
+import { resolveRunner, type StructuredRunnerOutput } from './runners';
+import { runScoring } from './scoring';
+import {
+  extractStructured,
+  unprotectPlaceholders,
+  signatureOf,
+  type StructuredDoc
+} from './structure';
+import { renderMarkdownTranslated, renderTranslated, type RenderedDoc } from './render';
+
 export async function startRun(runId: string): Promise<void> {
   const run = await store.getRun(runId);
   if (!run) return;
@@ -13,13 +22,17 @@ export async function startRun(runId: string): Promise<void> {
   if (!upload) return;
   const blob = await store.getUploadBlob(run.uploadId);
 
-  let sourceText = '';
+  let structured: StructuredDoc | null = null;
   let extractError: string | null = null;
   try {
-    sourceText = blob
-      ? await extractText(upload.filename, upload.mimeType, blob)
-      : (upload.textPreview || '');
-    if (!sourceText.trim()) extractError = 'Document has no extractable text.';
+    if (!blob && !upload.textPreview) {
+      extractError = 'Document has no extractable text.';
+    } else {
+      const buf =
+        blob ?? Buffer.from(upload.textPreview ?? '', 'utf8');
+      const mime = blob ? upload.mimeType : 'text/plain';
+      structured = await extractStructured(upload.filename, mime, buf);
+    }
   } catch (err) {
     extractError = err instanceof Error ? err.message : 'Extraction failed';
   }
@@ -28,18 +41,20 @@ export async function startRun(runId: string): Promise<void> {
     r.status = 'running';
   });
 
-  if (extractError) {
+  if (extractError || !structured) {
+    const message = extractError || 'Extraction failed';
     await store.updateRun(runId, (r) => {
       for (const t of r.results) {
         t.status = 'failed';
         t.completedAt = Date.now();
-        t.error = extractError!;
+        t.error = message;
       }
     });
     return;
   }
 
-  // Fire all runners in parallel; each updates its own slot independently.
+  const sourceDoc = structured;
+
   await Promise.allSettled(
     run.results.map(async (result) => {
       await store.updateRun(runId, (r) => {
@@ -49,28 +64,48 @@ export async function startRun(runId: string): Promise<void> {
           t.startedAt = Date.now();
         }
       });
+
       try {
         const runner = resolveRunner(result.runnerId);
-        const out = await runner.translate({
-          text: sourceText,
+        const out: StructuredRunnerOutput = await runner.translateStructured({
+          markdown: sourceDoc.markdown,
           sourceLang: upload.sourceLang,
-          targetLang: upload.targetLang
+          targetLang: upload.targetLang,
+          sourceMime: upload.mimeType,
+          sourceFilename: upload.filename,
+          sourceBytes: blob,
+          runId
         });
-        if (!out.translatedText || !out.translatedText.trim()) {
-          const tokHint =
-            out.outputTokens != null
-              ? ` (model returned ${out.outputTokens} tokens but no visible content; likely consumed by reasoning — increase max_completion_tokens)`
-              : '';
-          throw new Error(`Empty translation${tokHint}`);
+
+        // Unprotect placeholders that round-tripped through the engine.
+        const translatedMarkdown = unprotectPlaceholders(out.markdown, sourceDoc.placeholders);
+        if (!translatedMarkdown || !translatedMarkdown.trim()) {
+          throw new Error('Empty translation');
         }
-        // Persist the translation as a blob (downloadable via SAS).
-        await store.writeRunOutput(runId, result.runnerId, out.translatedText);
-        // Render in the original document format and persist alongside.
-        const rendered = await renderTranslated(
-          upload.filename,
-          upload.mimeType,
-          out.translatedText
-        );
+
+        // Persist the markdown intermediate for diffs / audit.
+        await store.writeRunOutput(runId, result.runnerId, translatedMarkdown);
+
+        // Render. NMT-document engines provide their own native bytes;
+        // text/LLM engines render via the markdown→docx renderer.
+        let rendered: RenderedDoc;
+        if (out.renderedOutput) {
+          rendered = out.renderedOutput;
+        } else if (out.kind === 'llm') {
+          rendered = await renderMarkdownTranslated(
+            upload.filename,
+            upload.mimeType,
+            translatedMarkdown
+          );
+        } else {
+          // nmt-text — current Translator. Same lossy plaintext render as before.
+          rendered = await renderTranslated(
+            upload.filename,
+            upload.mimeType,
+            translatedMarkdown
+          );
+        }
+
         const baseName = upload.filename.replace(/\.[^./\\]+$/, '');
         const safeRunner = result.runnerId.replace(/[^a-zA-Z0-9._-]/g, '_');
         const downloadName = `${baseName}.${upload.targetLang}.${safeRunner}.${rendered.ext}`;
@@ -81,13 +116,24 @@ export async function startRun(runId: string): Promise<void> {
           rendered.contentType,
           rendered.buffer
         );
-        const scores = scoreStub(sourceText, out.translatedText);
+
+        // Score against the source structured representation. We re-derive
+        // the candidate's signature from its unprotected markdown so the
+        // placeholder check compares apples to apples.
+        const scores = await runScoring({
+          sourceMarkdown: sourceDoc.rawMarkdown,
+          sourceSignature: signatureOf(sourceDoc.rawMarkdown),
+          targetMarkdown: translatedMarkdown,
+          sourceLang: upload.sourceLang,
+          targetLang: upload.targetLang
+        });
+
         await store.updateRun(runId, (r) => {
           const t = r.results.find((x) => x.runnerId === result.runnerId);
           if (t) {
             t.status = 'succeeded';
             t.completedAt = Date.now();
-            t.translatedText = out.translatedText;
+            t.translatedText = translatedMarkdown;
             t.displayName = runner.displayName;
             t.latencyMs = out.latencyMs;
             t.inputTokens = out.inputTokens;
