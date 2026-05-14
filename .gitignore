@@ -2,9 +2,13 @@ node_modules
 .next
 out
 dist
+build
 coverage
 .env
 .env.local
+.env.*.local
 *.log
 .DS_Store
 .vscode
+.turbo
+*.tsbuildinfo
