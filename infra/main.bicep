@@ -254,8 +254,8 @@ resource ca 'Microsoft.App/containerApps@2024-03-01' = if (!empty(containerImage
             { name: 'AZURE_DOC_TRANSLATOR_ENDPOINT', value: 'https://${names.cogTranslator}.cognitiveservices.azure.com' }
             { name: 'AZURE_FOUNDRY_ENDPOINT', value: foundryEndpoint }
             { name: 'AZURE_FOUNDRY_MODELS_JSON', value: foundryModelsJson }
-            { name: 'AZURE_EMBEDDING_DEPLOYMENT', value: 'text-embedding-3-large' }
-            { name: 'AZURE_JUDGE_MODEL', value: 'gpt-5-mini' }
+            { name: 'AZURE_EMBEDDING_DEPLOYMENT', value: 'text-embedding-3-large-015418' }
+            { name: 'AZURE_JUDGE_MODEL', value: 'gpt-4.1-mini-601090' }
             { name: 'AZURE_STORAGE_ACCOUNT', value: storage.name }
             { name: 'AZURE_STORAGE_UPLOADS_CONTAINER', value: uploadsContainer.name }
             { name: 'AZURE_STORAGE_UPLOADS_TABLE', value: uploadsTable.name }

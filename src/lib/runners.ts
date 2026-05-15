@@ -237,9 +237,9 @@ async function runDocumentTranslation(args: {
   // to write into an existing target and returns ValidationFailed.
 
   const sourceSas = await sasUrl(srcPath, 'r');
-  // Target SAS needs create+write (and read+list so the service can verify and
-  // we can download). 'racwl' is the conservative superset.
-  const targetSas = await sasUrl(tgtPath, 'racwl');
+  // Target SAS needs create+write (and read so we can download). 'l' (list) is
+  // not a valid blob SAS permission — only container SAS. Use 'racw'.
+  const targetSas = await sasUrl(tgtPath, 'racw');
 
   const base = config.docTranslatorEndpoint.replace(/\/+$/, '');
   const submit = `${base}/translator/document/batches?api-version=2024-05-01`;
