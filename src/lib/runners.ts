@@ -314,7 +314,7 @@ async function runDocumentTranslation(args: {
   };
 }
 
-async function sasUrl(blobPath: string, permissions: 'r' | 'rw'): Promise<string> {
+async function sasUrl(blobPath: string, permissions: string): Promise<string> {
   const svc = new BlobServiceClient(blobEndpoint(), credential());
   const start = new Date(Date.now() - 60_000);
   const expiry = new Date(Date.now() + 30 * 60_000);
@@ -323,7 +323,7 @@ async function sasUrl(blobPath: string, permissions: 'r' | 'rw'): Promise<string
     {
       containerName: config.uploadsContainer,
       blobName: blobPath,
-      permissions: BlobSASPermissions.parse(permissions === 'rw' ? 'rw' : 'r'),
+      permissions: BlobSASPermissions.parse(permissions),
       startsOn: start,
       expiresOn: expiry,
       protocol: 'https' as never
