@@ -233,11 +233,13 @@ async function runDocumentTranslation(args: {
   await container.getBlockBlobClient(srcPath).uploadData(args.sourceBytes, {
     blobHTTPHeaders: { blobContentType: args.sourceMime }
   });
-  // Pre-create the target placeholder so the service can overwrite.
-  await container.getBlockBlobClient(tgtPath).upload(new Uint8Array(0), 0);
+  // Do NOT pre-create the target blob: for storageType=File the service refuses
+  // to write into an existing target and returns ValidationFailed.
 
   const sourceSas = await sasUrl(srcPath, 'r');
-  const targetSas = await sasUrl(tgtPath, 'rw');
+  // Target SAS needs create+write (and read+list so the service can verify and
+  // we can download). 'racwl' is the conservative superset.
+  const targetSas = await sasUrl(tgtPath, 'racwl');
 
   const base = config.docTranslatorEndpoint.replace(/\/+$/, '');
   const submit = `${base}/translator/document/batches?api-version=2024-05-01`;
@@ -276,7 +278,24 @@ async function runDocumentTranslation(args: {
     if (status === 'Succeeded' || status === 'Failed' || status === 'Cancelled') break;
   }
   if (status !== 'Succeeded') {
-    throw new Error(`DocTranslation ended with status=${status}`);
+    // Pull the per-document error so we surface the real reason instead of a
+    // bare top-level status like ValidationFailed.
+    let detail = '';
+    try {
+      const docs = await fetch(`${opLocation}/documents`, { headers });
+      if (docs.ok) {
+        const j = (await docs.json()) as {
+          value?: Array<{ status?: string; error?: { code?: string; message?: string } }>;
+        };
+        const first = j.value?.find((d) => d.error);
+        if (first?.error) {
+          detail = ` ${first.error.code || ''}: ${first.error.message || ''}`.trim();
+        }
+      }
+    } catch {
+      // ignore — fall through to bare status
+    }
+    throw new Error(`DocTranslation ended with status=${status}${detail ? ' — ' + detail : ''}`);
   }
 
   const translatedBuf = await container.getBlockBlobClient(tgtPath).downloadToBuffer();

@@ -31,26 +31,35 @@ export async function runScoring(args: {
       targetMarkdown: args.targetMarkdown,
       sourceLang: args.sourceLang,
       targetLang: args.targetLang
-    }).catch((err) => ({
-      backTranslation: '',
-      breakdown: {
-        score: 0,
-        meanCosine: 0,
-        minCosine: 0,
-        segmentsCompared: 0
-      },
-      error: err instanceof Error ? err.message : String(err)
-    })),
+    }).catch((err) => {
+      const message = err instanceof Error ? err.message : String(err);
+      console.error('scoreMeaning failed:', message);
+      return {
+        backTranslation: '',
+        breakdown: {
+          score: 0,
+          meanCosine: 0,
+          minCosine: 0,
+          segmentsCompared: 0,
+          error: message
+        }
+      };
+    }),
     scoreSafety({
       sourceMarkdown: args.sourceMarkdown,
       targetMarkdown: args.targetMarkdown,
       sourceLang: args.sourceLang,
       targetLang: args.targetLang
-    }).catch((err) => ({
-      score: 60,
-      raw: 3,
-      rationale: `Safety scorer failed: ${err instanceof Error ? err.message : String(err)}`
-    }))
+    }).catch((err) => {
+      const message = err instanceof Error ? err.message : String(err);
+      console.error('scoreSafety failed:', message);
+      return {
+        score: 60,
+        raw: 3,
+        rationale: `Safety scorer failed: ${message}`,
+        error: message
+      };
+    })
   ]);
 
   const criticalErrors = detectCriticalErrors({

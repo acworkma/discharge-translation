@@ -48,6 +48,8 @@ export interface MeaningBreakdown {
   /** Minimum per-segment cosine (the weak spot). */
   minCosine: number;
   segmentsCompared: number;
+  /** Set when the scorer threw — surfaces the underlying cause to the UI. */
+  error?: string;
 }
 
 export interface SafetyBreakdown {
@@ -55,6 +57,8 @@ export interface SafetyBreakdown {
   score: number;
   raw: number; // 1..5
   rationale: string;
+  /** Set when the judge threw. */
+  error?: string;
 }
 
 export interface ScoreSet {

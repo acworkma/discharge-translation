@@ -19,11 +19,13 @@ interface MeaningBreakdown {
   meanCosine: number;
   minCosine: number;
   segmentsCompared: number;
+  error?: string;
 }
 interface SafetyBreakdown {
   score: number;
   raw: number;
   rationale: string;
+  error?: string;
 }
 interface CriticalError {
   kind: string;
@@ -407,6 +409,9 @@ function ResultDetail({ r }: { r: RunnerResult }) {
                 <li>Mean cosine: {s.meaning.meanCosine.toFixed(3)}</li>
                 <li>Min cosine: {s.meaning.minCosine.toFixed(3)}</li>
                 <li>Segments: {s.meaning.segmentsCompared}</li>
+                {s.meaning.error && (
+                  <li className="text-red-700 break-words">⚠ {s.meaning.error}</li>
+                )}
               </ul>
             )}
           </div>
