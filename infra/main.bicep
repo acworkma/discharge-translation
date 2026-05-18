@@ -39,6 +39,9 @@ param foundryProjectName string = 'prj-discharge'
 @description('JSON array of available Foundry model deployments for the UI picker')
 param foundryModelsJson string = '[{"id":"gpt-5.2","provider":"openai","tier":"flagship"},{"id":"gpt-4.1","provider":"openai","tier":"balanced"},{"id":"gpt-4.1-mini-601090","provider":"openai","tier":"budget","display":"gpt-4.1-mini"},{"id":"Mistral-Large-3","provider":"mistral","tier":"flagship"},{"id":"Llama-3.3-70B-Instruct","provider":"meta","tier":"balanced"},{"id":"DeepSeek-V3.2","provider":"deepseek","tier":"flagship"}]'
 
+@description('JSON array of Foundry prompt agents exposed as runners (Phase 2, feat/foundry-demo). Each agent maps to one candidate model; runtime fetches authoritative instructions+model from the project.')
+param foundryAgentsJson string = '[{"name":"translator-gpt52","display":"GPT-5.2","modelHint":"gpt-5.2","provider":"openai","tier":"flagship"},{"name":"translator-mistral-large","display":"Mistral Large 3","modelHint":"Mistral-Large-3","provider":"mistral","tier":"flagship"},{"name":"translator-llama","display":"Llama 3.3 70B","modelHint":"Llama-3.3-70B-Instruct","provider":"meta","tier":"balanced"},{"name":"translator-deepseek","display":"DeepSeek V3.2","modelHint":"DeepSeek-V3.2","provider":"deepseek","tier":"flagship"}]'
+
 var regionShort = 'eus2'
 var base = '${workload}-${env}-${regionShort}-${instance}'
 var baseNoDash = toLower('${workload}${env}${regionShort}${instance}')
@@ -280,6 +283,7 @@ resource ca 'Microsoft.App/containerApps@2024-03-01' = if (!empty(containerImage
             { name: 'AZURE_FOUNDRY_ENDPOINT', value: foundryEndpoint }
             { name: 'AZURE_AI_PROJECT_ENDPOINT', value: foundryProjectEndpoint }
             { name: 'AZURE_FOUNDRY_MODELS_JSON', value: foundryModelsJson }
+            { name: 'AZURE_FOUNDRY_AGENTS_JSON', value: foundryAgentsJson }
             { name: 'AZURE_EMBEDDING_DEPLOYMENT', value: 'text-embedding-3-large-015418' }
             { name: 'AZURE_JUDGE_MODEL', value: 'gpt-4.1-mini-601090' }
             { name: 'AZURE_STORAGE_ACCOUNT', value: storage.name }
