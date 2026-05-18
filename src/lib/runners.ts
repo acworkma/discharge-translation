@@ -20,7 +20,7 @@ import {
   generateBlobSASQueryParameters,
   type UserDelegationKey
 } from '@azure/storage-blob';
-import { credential, config, COGNITIVE_SERVICES_SCOPE, blobEndpoint } from './azure';
+import { credential, config, COGNITIVE_SERVICES_SCOPE, AI_FOUNDRY_SCOPE, blobEndpoint } from './azure';
 
 // ---------------------------------------------------------------------------
 // Shared types
@@ -509,7 +509,8 @@ async function fetchAgentDefinition(agentName: string): Promise<CachedAgentDef> 
       'AZURE_AI_PROJECT_ENDPOINT not configured — cannot resolve Foundry agent ' + agentName
     );
   }
-  const token = await credential().getToken(COGNITIVE_SERVICES_SCOPE);
+  // Agents data plane requires the ai.azure.com audience, not cognitiveservices.
+  const token = await credential().getToken(AI_FOUNDRY_SCOPE);
   if (!token?.token) {
     throw new Error('Failed to acquire AAD token for Foundry agents data plane');
   }

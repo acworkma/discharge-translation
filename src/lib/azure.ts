@@ -140,5 +140,11 @@ export function tableEndpoint(): string {
   return `https://${config.storageAccount}.table.core.windows.net`;
 }
 
-// Cognitive Services data plane scope used for AAD-based Translator calls.
+// Cognitive Services data plane scope used for AAD-based Translator calls
+// and the Foundry /models inference endpoint.
 export const COGNITIVE_SERVICES_SCOPE = 'https://cognitiveservices.azure.com/.default';
+
+// Azure AI Foundry agents/projects data plane scope. The agents API on the
+// project endpoint validates this audience explicitly and rejects
+// cognitiveservices tokens with "audience is incorrect (https://ai.azure.com)".
+export const AI_FOUNDRY_SCOPE = 'https://ai.azure.com/.default';
