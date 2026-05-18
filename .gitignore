@@ -15,3 +15,7 @@ coverage
 
 # azd local state (env vars, deployment outputs)
 .azure/
+
+# Python bytecode
+__pycache__/
+*.pyc
