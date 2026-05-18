@@ -12,3 +12,6 @@ coverage
 .vscode
 .turbo
 *.tsbuildinfo
+
+# azd local state (env vars, deployment outputs)
+.azure/

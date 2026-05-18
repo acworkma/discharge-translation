@@ -1,0 +1,76 @@
+# Foundry workspace metadata for the Discharge Translation demo.
+# Per microsoft-foundry skill: .foundry/ is the canonical workspace and this is
+# the canonical local/dev metadata file. Sidecars (e.g. agent-metadata.prod.yaml)
+# can be added later for env-specific overrides — never mix environments here.
+#
+# Source of truth for: project endpoint, agent names, ACR, evaluation suites.
+# Many fields below are seeded by `azd env get-values` (see azure.yaml).
+#
+# Branch: feat/foundry-demo. main is the rollback target — do not merge to main
+# until end of HoK and explicit approval.
+
+schemaVersion: "1.0"
+defaultEnvironment: dev
+
+environments:
+  dev:
+    projectEndpoint: https://foundry-acw.services.ai.azure.com/api/projects/prj-discharge
+    foundryAccountResourceId: /subscriptions/80e91cef-e379-45a7-b8bf-ebfffea647da/resourceGroups/rg-foundry/providers/Microsoft.CognitiveServices/accounts/foundry-acw
+    foundryProjectResourceId: /subscriptions/80e91cef-e379-45a7-b8bf-ebfffea647da/resourceGroups/rg-foundry/providers/Microsoft.CognitiveServices/accounts/foundry-acw/projects/prj-discharge
+    azureContainerRegistry: crdtprodeus2001
+    region: eastus2
+
+    # Model deployments on foundry-acw — all four candidate LLMs already exist
+    # at the account level (verified 2026-05-18). Judge + embedding are also
+    # account-level and shared. Do not duplicate via model_deploy.
+    candidateModels:
+      gpt-5.2: gpt-5.2
+      mistral-large: Mistral-Large-3
+      llama: Llama-3.3-70B-Instruct
+      deepseek: DeepSeek-V3.2
+    judgeModel: gpt-4.1-mini-601090           # frozen — never one of the candidates (no self-eval bias)
+    embeddingModel: text-embedding-3-large-015418
+
+    # Prompt agents (Phase 2). One agent per candidate LLM. Language is a
+    # system-prompt variable, not a per-language agent (see plan §Decisions).
+    promptAgents:
+      - name: translator-gpt52
+        model: gpt-5.2
+      - name: translator-mistral-large
+        model: Mistral-Large-3
+      - name: translator-llama
+        model: Llama-3.3-70B-Instruct
+      - name: translator-deepseek
+        model: DeepSeek-V3.2
+
+    # Hosted agents (Phase 5). Sources live under agents/<name>/ with their
+    # own .foundry/agent-metadata.yaml sidecars when needed for deploy.
+    hostedAgents:
+      - name: consensus-orchestrator
+        source: agents/consensus-orchestrator
+      - name: validation-harness
+        source: agents/validation-harness
+
+    # Custom evaluators (Phase 3). Mirror src/lib/scoring/ in TypeScript.
+    # Code lives under .foundry/evaluators/<name>/. Contract tests under
+    # the same folder enforce parity with the TS scorers.
+    evaluators:
+      - name: format-fidelity         # sync, deterministic
+      - name: meaning-fidelity        # back-translation + embedding cosine; uses judgeModel + embeddingModel
+      - name: safety-judge            # LLM-as-judge rubric; uses judgeModel
+      - name: critical-errors         # sync MQM gate
+      - name: ctqs                    # composite aggregator; mirrors src/lib/scoring/ctqs.ts weights
+
+    # Evaluation suites (Phase 4). evaluationSuites[] is the only supported
+    # shape — never write legacy testSuites[]/testCases[].
+    evaluationSuites:
+      - name: discharge-baseline
+        version: "1"
+        dataset:
+          name: discharge-baseline
+          version: "1"
+        evaluators: [format-fidelity, meaning-fidelity, safety-judge, critical-errors, ctqs]
+        deploymentName: gpt-4.1-mini-601090   # judge for LLM evaluators
+        tags:
+          tier: smoke
+          purpose: bakeoff

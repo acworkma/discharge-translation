@@ -24,6 +24,18 @@ param appPassword string = 'fr24'
 @description('Azure AI Foundry inference endpoint (e.g. https://foundry-acw.services.ai.azure.com/models)')
 param foundryEndpoint string = 'https://foundry-acw.services.ai.azure.com/models'
 
+@description('Azure AI Foundry project endpoint for the agents data plane (Phase 1, feat/foundry-demo)')
+param foundryProjectEndpoint string = 'https://foundry-acw.services.ai.azure.com/api/projects/prj-discharge'
+
+@description('Resource group of the Foundry account (cross-RG; foundry-acw is provisioned out-of-band)')
+param foundryAccountResourceGroup string = 'rg-foundry'
+
+@description('Foundry account name in foundryAccountResourceGroup')
+param foundryAccountName string = 'foundry-acw'
+
+@description('Foundry project name to declare under the account')
+param foundryProjectName string = 'prj-discharge'
+
 @description('JSON array of available Foundry model deployments for the UI picker')
 param foundryModelsJson string = '[{"id":"gpt-5.2","provider":"openai","tier":"flagship"},{"id":"gpt-4.1","provider":"openai","tier":"balanced"},{"id":"gpt-4.1-mini-601090","provider":"openai","tier":"budget","display":"gpt-4.1-mini"},{"id":"Mistral-Large-3","provider":"mistral","tier":"flagship"},{"id":"Llama-3.3-70B-Instruct","provider":"meta","tier":"balanced"},{"id":"DeepSeek-V3.2","provider":"deepseek","tier":"flagship"}]'
 
@@ -152,8 +164,21 @@ resource translator 'Microsoft.CognitiveServices/accounts@2024-04-01-preview' = 
   }
 }
 
-// Azure AI Foundry is provisioned out-of-band (foundry-acw in rg-foundry). Cross-RG role
-// assignments for the UAMI on that account are made by the deploy workflow (az role assignment).
+// Azure AI Foundry account (foundry-acw) is provisioned out-of-band in rg-foundry.
+// The prj-discharge project lives under that account and is declared in IaC
+// via a cross-RG module so the project exists in Bicep state (Phase 1,
+// feat/foundry-demo). Account-level role assignments for the UAMI are made by
+// the deploy workflow (az role assignment).
+module foundryProject 'foundry-project.bicep' = {
+  name: 'foundry-project-${foundryProjectName}'
+  scope: resourceGroup(foundryAccountResourceGroup)
+  params: {
+    foundryAccountName: foundryAccountName
+    location: location
+    projectName: foundryProjectName
+    workloadUamiPrincipalId: uami.properties.principalId
+  }
+}
 
 // --- RBAC: grant the workload UAMI access to the data planes -------------
 // Built-in role IDs (subscription-scoped GUIDs).
@@ -253,6 +278,7 @@ resource ca 'Microsoft.App/containerApps@2024-03-01' = if (!empty(containerImage
             // Document Translation lives on the same Translator resource for the demo.
             { name: 'AZURE_DOC_TRANSLATOR_ENDPOINT', value: 'https://${names.cogTranslator}.cognitiveservices.azure.com' }
             { name: 'AZURE_FOUNDRY_ENDPOINT', value: foundryEndpoint }
+            { name: 'AZURE_AI_PROJECT_ENDPOINT', value: foundryProjectEndpoint }
             { name: 'AZURE_FOUNDRY_MODELS_JSON', value: foundryModelsJson }
             { name: 'AZURE_EMBEDDING_DEPLOYMENT', value: 'text-embedding-3-large-015418' }
             { name: 'AZURE_JUDGE_MODEL', value: 'gpt-4.1-mini-601090' }
@@ -273,3 +299,6 @@ output containerAppFqdn string = !empty(containerImage) ? ca.properties.configur
 output acrLoginServer string = '${acr.name}.azurecr.io'
 output uamiPrincipalId string = uami.properties.principalId
 output uamiClientId string = uami.properties.clientId
+output AZURE_AI_PROJECT_ENDPOINT string = foundryProject.outputs.projectEndpoint
+output AZURE_AI_PROJECT_RESOURCE_ID string = foundryProject.outputs.projectResourceId
+output AZURE_CONTAINER_REGISTRY_NAME string = acr.name
