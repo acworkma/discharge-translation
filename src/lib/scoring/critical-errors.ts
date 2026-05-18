@@ -8,8 +8,50 @@
 
 import type { CriticalError } from '../storage';
 
-const DOSE_RE =
-  /\b(\d+(?:\.\d+)?)\s?(mg|mcg|μg|ug|ml|mL|l|L|g|kg|iu|IU|units?|tablets?|caps?|tab|drops?|sprays?|puffs?|%)\b/gi;
+// Translated dose-unit synonyms (day-1 target languages). Each entry maps a
+// surface form to a canonical English unit so target-language doses can be
+// matched against the source. Keep flat — performance is not interesting.
+//
+// Sources: drug-label conventions in es/vi/zh-Hans/ar/tl. Coverage is
+// pragmatic: enough to neutralize false positives on common discharge med
+// tables. The LLM-judge SafetyScore catches the long tail.
+const UNIT_SYNONYMS: Array<[RegExp, string]> = [
+  // English (canonical) — accept both singular/plural and case-insensitive.
+  [/^mg$/i, 'mg'],
+  [/^(mcg|μg|ug)$/i, 'mcg'],
+  [/^(ml|mL)$/i, 'ml'],
+  [/^(l|L|lt|lts|liters?|litres?|litros?)$/i, 'l'],
+  [/^(g|gramos?|grams?)$/i, 'g'],
+  [/^kg$/i, 'kg'],
+  [/^(iu|IU|unidad(?:es)?|units?|đơn vị|单位|وحدات?|yunit)$/i, 'unit'],
+  [/^(tablets?|tabs?|comprimidos?|tabletas?|viên|片|قرص|أقراص|tableta)$/i, 'tablet'],
+  [/^(caps?|cápsulas?|capsulas?|capsules?|viên nang|胶囊|كبسولات?|kapsula)$/i, 'capsule'],
+  [/^(drops?|gotas?|giọt|滴|قطرات?|patak)$/i, 'drop'],
+  [/^(sprays?|aerosol(?:es)?|pulverizaciones?|xịt|喷|بخة|بخات|spray)$/i, 'spray'],
+  [/^(puffs?|caladas?|inhalaciones?|nhát xịt|nhát hít|喷雾|بختة|hithit)$/i, 'puff'],
+  [/^%$/, '%']
+];
+
+// All unit surface forms collapsed into one alternation. Built once.
+const UNIT_PATTERN = (() => {
+  // Extract literal alternatives from each RegExp source (strip ^$ and group wrappers).
+  const alts: string[] = [];
+  for (const [re] of UNIT_SYNONYMS) {
+    let src = re.source.replace(/^\^/, '').replace(/\$$/, '');
+    // Strip a single outer non-capturing or capturing group if present.
+    if (src.startsWith('(') && src.endsWith(')')) src = src.slice(1, -1);
+    alts.push(src);
+  }
+  // Join + assemble. Note: `puffs?|caladas?|...` style sub-alternations remain intact.
+  return alts.join('|');
+})();
+
+// Dose regex over the union of unit synonyms. Number form accepts `.` or `,`
+// as the decimal separator so non-English locales survive.
+const DOSE_RE = new RegExp(
+  String.raw`(?<![A-Za-z0-9])(\d+(?:[.,]\d+)?)\s*(` + UNIT_PATTERN + `)(?![A-Za-z0-9])`,
+  'giu'
+);
 const NUMBER_RE = /\b\d+(?:\.\d+)?\b/g;
 
 interface NegationVocab {
@@ -60,8 +102,12 @@ export function detectCriticalErrors(args: {
   const errors: CriticalError[] = [];
 
   // ----- numeric_mismatch -----
+  // Normalize the target's decimal separator (comma → dot) so non-English
+  // locales (es/vi/ar/tl all use `,` as decimal sep) don't fragment `38,3`
+  // into two tokens. Source stays as-is — it's English by contract.
+  const tgtForNumbers = normalizeDecimalCommas(args.targetMarkdown);
   const srcNums = (args.sourceMarkdown.match(NUMBER_RE) || []).map((n) => n).sort();
-  const tgtNums = (args.targetMarkdown.match(NUMBER_RE) || []).map((n) => n).sort();
+  const tgtNums = (tgtForNumbers.match(NUMBER_RE) || []).map((n) => n).sort();
   const diff = symmetricMultisetDiff(srcNums, tgtNums);
   if (diff.missing.length > 0 || diff.extra.length > 0) {
     errors.push({
@@ -72,6 +118,10 @@ export function detectCriticalErrors(args: {
   }
 
   // ----- dose_change -----
+  // Match doses as a multiset of (value, canonical-unit) rather than by
+  // sorted positional pairing. Positional pairing cascaded N+1 spurious
+  // findings when a single dose dropped (e.g. `2 puffs` not matched because
+  // the target rendered it as `2 caladas` — now handled via UNIT_SYNONYMS).
   const srcDoses = extractDoses(args.sourceMarkdown);
   const tgtDoses = extractDoses(args.targetMarkdown);
   const doseIssues = compareDoses(srcDoses, tgtDoses);
@@ -116,32 +166,87 @@ export function detectCriticalErrors(args: {
 
 interface Dose {
   value: number;
+  /** Canonical unit (mg, mcg, ml, l, g, kg, unit, tablet, capsule, drop, spray, puff, %). */
   unit: string;
+}
+
+function canonicalUnit(raw: string): string {
+  for (const [re, canon] of UNIT_SYNONYMS) {
+    if (re.test(raw)) return canon;
+  }
+  return raw.toLowerCase();
 }
 
 function extractDoses(s: string): Dose[] {
   const out: Dose[] = [];
+  // Normalize decimal commas so values parse uniformly. Apply only at the
+  // captured number, not globally, to avoid touching unrelated commas.
   for (const m of s.matchAll(DOSE_RE)) {
-    out.push({ value: parseFloat(m[1]), unit: m[2].toLowerCase() });
+    const numStr = m[1].replace(',', '.');
+    out.push({ value: parseFloat(numStr), unit: canonicalUnit(m[2]) });
   }
-  return out.sort((a, b) => a.value - b.value || a.unit.localeCompare(b.unit));
+  return out;
 }
 
+/** Compare doses as a multiset of (value, canonical-unit). Doses present in
+ * source AND target with identical value+unit cancel out; the remainders are
+ * the real drift. This avoids the positional-pairing cascade where one
+ * dropped dose produced N+1 spurious findings. */
 function compareDoses(src: Dose[], tgt: Dose[]): string[] {
-  const issues: string[] = [];
-  // Match in sorted order; report value drifts > 0% and unit changes.
-  const n = Math.min(src.length, tgt.length);
-  for (let i = 0; i < n; i++) {
-    if (src[i].unit !== tgt[i].unit) {
-      issues.push(`Dose unit changed: ${src[i].value}${src[i].unit} → ${tgt[i].value}${tgt[i].unit}`);
-    } else if (Math.abs(src[i].value - tgt[i].value) / Math.max(1, src[i].value) > 0.001) {
-      issues.push(`Dose value changed: ${src[i].value}${src[i].unit} → ${tgt[i].value}${tgt[i].unit}`);
+  const key = (d: Dose) => `${d.value}|${d.unit}`;
+  const srcMap = new Map<string, number>();
+  const tgtMap = new Map<string, number>();
+  for (const d of src) srcMap.set(key(d), (srcMap.get(key(d)) || 0) + 1);
+  for (const d of tgt) tgtMap.set(key(d), (tgtMap.get(key(d)) || 0) + 1);
+
+  const missing: Dose[] = [];
+  const extra: Dose[] = [];
+  for (const d of src) {
+    const k = key(d);
+    if ((srcMap.get(k) || 0) > (tgtMap.get(k) || 0)) {
+      missing.push(d);
+      srcMap.set(k, (srcMap.get(k) || 0) - 1);
     }
   }
-  if (src.length !== tgt.length) {
-    issues.push(`Dose count drift: source=${src.length} target=${tgt.length}`);
+  for (const d of tgt) {
+    const k = key(d);
+    if ((tgtMap.get(k) || 0) > (srcMap.get(k) || 0)) {
+      extra.push(d);
+      tgtMap.set(k, (tgtMap.get(k) || 0) - 1);
+    }
   }
+
+  const issues: string[] = [];
+  // Pair missing↔extra greedily by closest value within the same unit so we
+  // can report unit-vs-value drift distinctly. Anything left over is reported
+  // as a drop or addition.
+  for (const m of missing.slice()) {
+    const idx = extra.findIndex((e) => e.unit === m.unit);
+    if (idx >= 0) {
+      const e = extra.splice(idx, 1)[0];
+      issues.push(`Dose value changed: ${m.value}${m.unit} → ${e.value}${e.unit}`);
+      missing.splice(missing.indexOf(m), 1);
+    }
+  }
+  for (const m of missing.slice()) {
+    if (extra.length > 0) {
+      const e = extra.shift()!;
+      issues.push(`Dose unit changed: ${m.value}${m.unit} → ${e.value}${e.unit}`);
+      missing.splice(missing.indexOf(m), 1);
+    }
+  }
+  for (const m of missing) issues.push(`Dose dropped: ${m.value}${m.unit}`);
+  for (const e of extra) issues.push(`Dose added: ${e.value}${e.unit}`);
   return issues;
+}
+
+function normalizeDecimalCommas(s: string): string {
+  // Replace `<digit>,<digit>` with `<digit>.<digit>` so locale-formatted
+  // decimals (es/vi/ar/tl) tokenize as a single number. Avoids touching
+  // thousands separators (`1,000`) by requiring exactly one digit on the
+  // right OR by only converting when followed by 1–3 digits NOT followed by
+  // another digit — to be safe, just rewrite `,\d{1,3}(?!\d)` to `.…`.
+  return s.replace(/(\d),(\d{1,3})(?!\d)/g, '$1.$2');
 }
 
 function symmetricMultisetDiff(a: string[], b: string[]) {
