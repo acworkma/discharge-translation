@@ -1,39 +1,69 @@
 // Embeddings client for the meaning-fidelity scorer (ask3 §5).
 //
-// Uses the Azure AI Foundry inference endpoint with the deployment name in
-// config.embeddingDeployment (default `text-embedding-3-large`). When the
-// embedding-4 successor lands in-region, swap by setting
-// AZURE_EMBEDDING_DEPLOYMENT — no code change required.
+// Uses the Azure OpenAI deployment-scoped path on the Foundry resource:
+//   POST {foundryBase}/openai/deployments/{deployment}/embeddings?api-version=...
+//
+// The Foundry Models inference `/models/embeddings` router does NOT correctly
+// resolve AOAI embedding deployments (e.g. `text-embedding-3-large-015418`):
+// it strips the deployment suffix and routes to a legacy
+// `/v1/engines/{base-model}/embeddings` path, which returns HTTP 200 with an
+// empty body (grpc-status 12 in the headers). We bypass it and hit the AOAI
+// deployment route directly. Chat completions keep using `@azure-rest/ai-inference`
+// because that router works for OpenAI-deployed chat models.
 
-import ModelClient, { isUnexpected } from '@azure-rest/ai-inference';
-import { AzureKeyCredential } from '@azure/core-auth';
 import { credential, config, COGNITIVE_SERVICES_SCOPE } from './azure';
 
-function client() {
+const EMBED_API_VERSION = process.env.AZURE_EMBEDDING_API_VERSION || '2024-10-21';
+
+function foundryBase(): string {
   if (!config.foundryEndpoint) {
     throw new Error('AZURE_FOUNDRY_ENDPOINT not configured (required for embeddings)');
   }
+  // Strip trailing `/models` (the inference-API suffix) and any trailing slash
+  // so we can append AOAI-style paths.
+  return config.foundryEndpoint.replace(/\/+$/, '').replace(/\/models$/, '');
+}
+
+async function authHeaders(): Promise<Record<string, string>> {
   if (config.foundryApiKey) {
-    return ModelClient(config.foundryEndpoint, new AzureKeyCredential(config.foundryApiKey));
+    return { 'api-key': config.foundryApiKey };
   }
-  return ModelClient(config.foundryEndpoint, credential(), {
-    credentials: { scopes: [COGNITIVE_SERVICES_SCOPE] }
-  });
+  const token = await credential().getToken(COGNITIVE_SERVICES_SCOPE);
+  if (!token?.token) {
+    throw new Error('Failed to acquire AAD token for cognitiveservices scope');
+  }
+  return { Authorization: `Bearer ${token.token}` };
 }
 
 export async function embed(texts: string[]): Promise<number[][]> {
   if (texts.length === 0) return [];
-  const c = client();
-  const res = await c.path('/embeddings').post({
-    body: { model: config.embeddingDeployment, input: texts }
+  const url = `${foundryBase()}/openai/deployments/${encodeURIComponent(
+    config.embeddingDeployment
+  )}/embeddings?api-version=${EMBED_API_VERSION}`;
+
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(await authHeaders())
+    },
+    body: JSON.stringify({ input: texts })
   });
-  if (isUnexpected(res)) {
-    const err = res.body as { error?: { message?: string } };
-    throw new Error(
-      `Embeddings ${res.status}: ${err?.error?.message ?? 'unknown error'}`
-    );
+
+  if (!res.ok) {
+    let detail = '';
+    try {
+      const errBody = (await res.json()) as { error?: { message?: string } };
+      detail = errBody?.error?.message ?? '';
+    } catch {
+      detail = (await res.text().catch(() => '')) || '';
+    }
+    throw new Error(`Embeddings ${res.status}: ${detail || res.statusText}`);
   }
-  const body = res.body as { data?: Array<{ embedding: number[]; index?: number }> };
+
+  const body = (await res.json()) as {
+    data?: Array<{ embedding: number[]; index?: number }>;
+  };
   const data = body.data ?? [];
   // Preserve order per OpenAI/Foundry spec (responses match request order).
   const sorted = [...data].sort((a, b) => (a.index ?? 0) - (b.index ?? 0));
