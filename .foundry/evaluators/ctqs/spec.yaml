@@ -1,0 +1,30 @@
+name: ctqs
+display_name: CTQs Composite
+version: "1"
+description: |
+  Composite "critical to quality" aggregator. Combines format, meaning,
+  safety into a weighted 0-100 score (0.25 / 0.45 / 0.30), subtracts soft
+  penalties per critical error (high=15, medium=7, low=3), then maps to a
+  three-way decision: auto_publish (>=90), human_review (>=80), reject
+  (otherwise or if critical_gate_failed). Mirrors src/lib/scoring/ctqs.ts.
+
+evaluator_type: code
+entrypoint: evaluator:CTQsEvaluator
+
+data_schema:
+  required: [format_fidelity, meaning_fidelity, safety_score]
+  properties:
+    format_fidelity:      { type: numeric }
+    meaning_fidelity:     { type: numeric }
+    safety_score:         { type: numeric }
+    critical_errors:      { type: array, description: "List of {kind, severity, detail} entries." }
+    critical_gate_failed: { type: boolean }
+
+metrics:
+  ctqs:         { type: numeric, desirable_direction: higher, min_value: 0, max_value: 100 }
+  overall:      { type: numeric, desirable_direction: higher, min_value: 0, max_value: 1 }
+  soft_penalty: { type: numeric, desirable_direction: lower,  min_value: 0, max_value: 1000 }
+  decision:     { type: string }
+
+categories: [translation, aggregation, deterministic]
+supported_evaluation_levels: [row]

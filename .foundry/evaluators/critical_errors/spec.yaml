@@ -1,0 +1,35 @@
+name: critical-errors
+display_name: Critical Errors
+version: "1"
+description: |
+  Deterministic safety-gate evaluator. Detects three classes of critical
+  translation errors: numeric_mismatch (number multiset drift), dose_change
+  (value + canonical-unit multiset drift across en/es/zh-Hans/ar/vi/tl unit
+  synonyms), and negation_drift (negation density collapse). Sets
+  critical_gate_failed=true if any high-severity error is found, which the
+  CTQS aggregator treats as a hard reject. Mirrors
+  src/lib/scoring/critical-errors.ts.
+
+evaluator_type: code
+entrypoint: evaluator:CriticalErrorsEvaluator
+
+data_schema:
+  required: [source_markdown, target_markdown]
+  properties:
+    source_markdown: { type: string }
+    target_markdown: { type: string }
+    source_lang: { type: string, description: "BCP-47 source language tag" }
+    target_lang: { type: string, description: "BCP-47 target language tag" }
+    back_translation_markdown:
+      type: string
+      description: "Optional back-translation; required only to catch negation drops the target-language scan can't see."
+
+metrics:
+  critical_errors_count: { type: numeric, desirable_direction: lower, min_value: 0, max_value: 100 }
+  critical_errors_high:  { type: numeric, desirable_direction: lower, min_value: 0, max_value: 100 }
+  critical_errors_medium:{ type: numeric, desirable_direction: lower, min_value: 0, max_value: 100 }
+  critical_errors_low:   { type: numeric, desirable_direction: lower, min_value: 0, max_value: 100 }
+  critical_gate_failed:  { type: boolean, desirable_direction: lower }
+
+categories: [translation, safety, deterministic]
+supported_evaluation_levels: [row]

@@ -20,3 +20,29 @@ test under `tests/foundry-evaluator-parity.test.ts`.
 
 This is the **mirror invariant** that lets us roll back at runtime: TypeScript
 scorers stay authoritative; Foundry evaluators are the eval-time mirror.
+
+## Status (Phase 3)
+
+All five evaluators are implemented under `<name>/evaluator.py` with a
+matching `<name>/spec.yaml` declaring metric definitions and data schema.
+A shared `_common/structure.py` ports the markdown structure scanner.
+
+The parity test for `format_fidelity` (`test_parity.py`) runs five fixed
+fixtures through both the Python evaluator and the TypeScript scorer (via
+`npx tsx ts_shim.ts`) and asserts the metrics match within 0.05 — this is
+the live mirror invariant for the deterministic format scorer.
+
+```bash
+pytest .foundry/evaluators/format_fidelity/test_parity.py -v
+```
+
+The remaining evaluators are either networked (`meaning_fidelity`,
+`safety_judge`) or pure aggregators (`ctqs`) — parity contracts for those
+would require either live Azure calls or are not value-additive, so they
+are deliberately skipped. `critical_errors` is fully deterministic and a
+future parity test there is a low-risk add.
+
+Live registration of these evaluators into the prj-discharge evaluator
+catalog (via `evaluator_catalog_create`) is deferred to Phase 4 — at that
+point we bundle each folder as a blob, register, and update
+`agent-metadata.yaml` evaluators[] with `catalog_id` alongside `path`.
