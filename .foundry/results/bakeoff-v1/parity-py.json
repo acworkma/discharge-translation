@@ -1,0 +1,814 @@
+{
+  "generated_at": "2026-05-18T22:33:58.607445+00:00",
+  "candidate_mode": "identity",
+  "dataset": "discharge-baseline-v1",
+  "rows": [
+    {
+      "case_id": "clean-es-419",
+      "fixture_kind": "sample-clean",
+      "target_lang": "es-419",
+      "format_fidelity": 100.0,
+      "heading_order": 100.0,
+      "table_shape": 100.0,
+      "placeholders": 100.0,
+      "critical_errors_count": 0,
+      "critical_errors_high": 0,
+      "critical_errors_medium": 0,
+      "critical_errors_low": 0,
+      "critical_gate_failed": false,
+      "details": []
+    },
+    {
+      "case_id": "heading-swap-es-419",
+      "fixture_kind": "sample-heading-swap",
+      "target_lang": "es-419",
+      "format_fidelity": 100.0,
+      "heading_order": 100.0,
+      "table_shape": 100.0,
+      "placeholders": 100.0,
+      "critical_errors_count": 0,
+      "critical_errors_high": 0,
+      "critical_errors_medium": 0,
+      "critical_errors_low": 0,
+      "critical_gate_failed": false,
+      "details": []
+    },
+    {
+      "case_id": "missing-table-es-419",
+      "fixture_kind": "sample-missing-table",
+      "target_lang": "es-419",
+      "format_fidelity": 100.0,
+      "heading_order": 100.0,
+      "table_shape": 100.0,
+      "placeholders": 100.0,
+      "critical_errors_count": 0,
+      "critical_errors_high": 0,
+      "critical_errors_medium": 0,
+      "critical_errors_low": 0,
+      "critical_gate_failed": false,
+      "details": []
+    },
+    {
+      "case_id": "clean-zh-Hans",
+      "fixture_kind": "sample-clean",
+      "target_lang": "zh-Hans",
+      "format_fidelity": 100.0,
+      "heading_order": 100.0,
+      "table_shape": 100.0,
+      "placeholders": 100.0,
+      "critical_errors_count": 1,
+      "critical_errors_high": 0,
+      "critical_errors_medium": 1,
+      "critical_errors_low": 0,
+      "critical_gate_failed": false,
+      "details": [
+        {
+          "kind": "negation_drift",
+          "severity": "medium",
+          "detail": "Source has 2 negation tokens but target language detected 0 (zh-Hans)."
+        }
+      ]
+    },
+    {
+      "case_id": "heading-swap-zh-Hans",
+      "fixture_kind": "sample-heading-swap",
+      "target_lang": "zh-Hans",
+      "format_fidelity": 100.0,
+      "heading_order": 100.0,
+      "table_shape": 100.0,
+      "placeholders": 100.0,
+      "critical_errors_count": 1,
+      "critical_errors_high": 0,
+      "critical_errors_medium": 1,
+      "critical_errors_low": 0,
+      "critical_gate_failed": false,
+      "details": [
+        {
+          "kind": "negation_drift",
+          "severity": "medium",
+          "detail": "Source has 2 negation tokens but target language detected 0 (zh-Hans)."
+        }
+      ]
+    },
+    {
+      "case_id": "missing-table-zh-Hans",
+      "fixture_kind": "sample-missing-table",
+      "target_lang": "zh-Hans",
+      "format_fidelity": 100.0,
+      "heading_order": 100.0,
+      "table_shape": 100.0,
+      "placeholders": 100.0,
+      "critical_errors_count": 1,
+      "critical_errors_high": 0,
+      "critical_errors_medium": 1,
+      "critical_errors_low": 0,
+      "critical_gate_failed": false,
+      "details": [
+        {
+          "kind": "negation_drift",
+          "severity": "medium",
+          "detail": "Source has 2 negation tokens but target language detected 0 (zh-Hans)."
+        }
+      ]
+    },
+    {
+      "case_id": "clean-ar-001",
+      "fixture_kind": "sample-clean",
+      "target_lang": "ar-001",
+      "format_fidelity": 100.0,
+      "heading_order": 100.0,
+      "table_shape": 100.0,
+      "placeholders": 100.0,
+      "critical_errors_count": 1,
+      "critical_errors_high": 0,
+      "critical_errors_medium": 1,
+      "critical_errors_low": 0,
+      "critical_gate_failed": false,
+      "details": [
+        {
+          "kind": "negation_drift",
+          "severity": "medium",
+          "detail": "Source has 2 negation tokens but target language detected 0 (ar)."
+        }
+      ]
+    },
+    {
+      "case_id": "heading-swap-ar-001",
+      "fixture_kind": "sample-heading-swap",
+      "target_lang": "ar-001",
+      "format_fidelity": 100.0,
+      "heading_order": 100.0,
+      "table_shape": 100.0,
+      "placeholders": 100.0,
+      "critical_errors_count": 1,
+      "critical_errors_high": 0,
+      "critical_errors_medium": 1,
+      "critical_errors_low": 0,
+      "critical_gate_failed": false,
+      "details": [
+        {
+          "kind": "negation_drift",
+          "severity": "medium",
+          "detail": "Source has 2 negation tokens but target language detected 0 (ar)."
+        }
+      ]
+    },
+    {
+      "case_id": "missing-table-ar-001",
+      "fixture_kind": "sample-missing-table",
+      "target_lang": "ar-001",
+      "format_fidelity": 100.0,
+      "heading_order": 100.0,
+      "table_shape": 100.0,
+      "placeholders": 100.0,
+      "critical_errors_count": 1,
+      "critical_errors_high": 0,
+      "critical_errors_medium": 1,
+      "critical_errors_low": 0,
+      "critical_gate_failed": false,
+      "details": [
+        {
+          "kind": "negation_drift",
+          "severity": "medium",
+          "detail": "Source has 2 negation tokens but target language detected 0 (ar)."
+        }
+      ]
+    },
+    {
+      "case_id": "clean-vi-VN",
+      "fixture_kind": "sample-clean",
+      "target_lang": "vi-VN",
+      "format_fidelity": 100.0,
+      "heading_order": 100.0,
+      "table_shape": 100.0,
+      "placeholders": 100.0,
+      "critical_errors_count": 1,
+      "critical_errors_high": 0,
+      "critical_errors_medium": 1,
+      "critical_errors_low": 0,
+      "critical_gate_failed": false,
+      "details": [
+        {
+          "kind": "negation_drift",
+          "severity": "medium",
+          "detail": "Source has 2 negation tokens but target language detected 0 (vi)."
+        }
+      ]
+    },
+    {
+      "case_id": "heading-swap-vi-VN",
+      "fixture_kind": "sample-heading-swap",
+      "target_lang": "vi-VN",
+      "format_fidelity": 100.0,
+      "heading_order": 100.0,
+      "table_shape": 100.0,
+      "placeholders": 100.0,
+      "critical_errors_count": 1,
+      "critical_errors_high": 0,
+      "critical_errors_medium": 1,
+      "critical_errors_low": 0,
+      "critical_gate_failed": false,
+      "details": [
+        {
+          "kind": "negation_drift",
+          "severity": "medium",
+          "detail": "Source has 2 negation tokens but target language detected 0 (vi)."
+        }
+      ]
+    },
+    {
+      "case_id": "missing-table-vi-VN",
+      "fixture_kind": "sample-missing-table",
+      "target_lang": "vi-VN",
+      "format_fidelity": 100.0,
+      "heading_order": 100.0,
+      "table_shape": 100.0,
+      "placeholders": 100.0,
+      "critical_errors_count": 1,
+      "critical_errors_high": 0,
+      "critical_errors_medium": 1,
+      "critical_errors_low": 0,
+      "critical_gate_failed": false,
+      "details": [
+        {
+          "kind": "negation_drift",
+          "severity": "medium",
+          "detail": "Source has 2 negation tokens but target language detected 0 (vi)."
+        }
+      ]
+    },
+    {
+      "case_id": "clean-fil-PH",
+      "fixture_kind": "sample-clean",
+      "target_lang": "fil-PH",
+      "format_fidelity": 100.0,
+      "heading_order": 100.0,
+      "table_shape": 100.0,
+      "placeholders": 100.0,
+      "critical_errors_count": 1,
+      "critical_errors_high": 0,
+      "critical_errors_medium": 1,
+      "critical_errors_low": 0,
+      "critical_gate_failed": false,
+      "details": [
+        {
+          "kind": "negation_drift",
+          "severity": "medium",
+          "detail": "Source has 2 negation tokens but target language detected 0 (tl)."
+        }
+      ]
+    },
+    {
+      "case_id": "heading-swap-fil-PH",
+      "fixture_kind": "sample-heading-swap",
+      "target_lang": "fil-PH",
+      "format_fidelity": 100.0,
+      "heading_order": 100.0,
+      "table_shape": 100.0,
+      "placeholders": 100.0,
+      "critical_errors_count": 1,
+      "critical_errors_high": 0,
+      "critical_errors_medium": 1,
+      "critical_errors_low": 0,
+      "critical_gate_failed": false,
+      "details": [
+        {
+          "kind": "negation_drift",
+          "severity": "medium",
+          "detail": "Source has 2 negation tokens but target language detected 0 (tl)."
+        }
+      ]
+    },
+    {
+      "case_id": "missing-table-fil-PH",
+      "fixture_kind": "sample-missing-table",
+      "target_lang": "fil-PH",
+      "format_fidelity": 100.0,
+      "heading_order": 100.0,
+      "table_shape": 100.0,
+      "placeholders": 100.0,
+      "critical_errors_count": 1,
+      "critical_errors_high": 0,
+      "critical_errors_medium": 1,
+      "critical_errors_low": 0,
+      "critical_gate_failed": false,
+      "details": [
+        {
+          "kind": "negation_drift",
+          "severity": "medium",
+          "detail": "Source has 2 negation tokens but target language detected 0 (tl)."
+        }
+      ]
+    },
+    {
+      "case_id": "dose-mg-mcg-es-419",
+      "fixture_kind": "regression-dose-unit-swap",
+      "target_lang": "es-419",
+      "format_fidelity": 100.0,
+      "heading_order": 100.0,
+      "table_shape": 100.0,
+      "placeholders": 100.0,
+      "critical_errors_count": 1,
+      "critical_errors_high": 0,
+      "critical_errors_medium": 1,
+      "critical_errors_low": 0,
+      "critical_gate_failed": false,
+      "details": [
+        {
+          "kind": "negation_drift",
+          "severity": "medium",
+          "detail": "Source has 1 negation tokens but target language detected 0 (es)."
+        }
+      ]
+    },
+    {
+      "case_id": "negation-do-not-es-419",
+      "fixture_kind": "regression-negation-drop",
+      "target_lang": "es-419",
+      "format_fidelity": 100.0,
+      "heading_order": 100.0,
+      "table_shape": 100.0,
+      "placeholders": 100.0,
+      "critical_errors_count": 1,
+      "critical_errors_high": 0,
+      "critical_errors_medium": 1,
+      "critical_errors_low": 0,
+      "critical_gate_failed": false,
+      "details": [
+        {
+          "kind": "negation_drift",
+          "severity": "medium",
+          "detail": "Source has 5 negation tokens but target language detected 0 (es)."
+        }
+      ]
+    },
+    {
+      "case_id": "decimal-comma-es-419",
+      "fixture_kind": "regression-locale-decimal",
+      "target_lang": "es-419",
+      "format_fidelity": 100.0,
+      "heading_order": 100.0,
+      "table_shape": 100.0,
+      "placeholders": 100.0,
+      "critical_errors_count": 0,
+      "critical_errors_high": 0,
+      "critical_errors_medium": 0,
+      "critical_errors_low": 0,
+      "critical_gate_failed": false,
+      "details": []
+    },
+    {
+      "case_id": "placeholder-orphan-es-419",
+      "fixture_kind": "regression-placeholder-gating",
+      "target_lang": "es-419",
+      "format_fidelity": 100.0,
+      "heading_order": 100.0,
+      "table_shape": 100.0,
+      "placeholders": 100.0,
+      "critical_errors_count": 0,
+      "critical_errors_high": 0,
+      "critical_errors_medium": 0,
+      "critical_errors_low": 0,
+      "critical_gate_failed": false,
+      "details": []
+    },
+    {
+      "case_id": "tiny-table-es-419",
+      "fixture_kind": "regression-table-shape",
+      "target_lang": "es-419",
+      "format_fidelity": 100.0,
+      "heading_order": 100.0,
+      "table_shape": 100.0,
+      "placeholders": 100.0,
+      "critical_errors_count": 0,
+      "critical_errors_high": 0,
+      "critical_errors_medium": 0,
+      "critical_errors_low": 0,
+      "critical_gate_failed": false,
+      "details": []
+    },
+    {
+      "case_id": "icd-codes-preserved-es-419",
+      "fixture_kind": "regression-do-not-translate",
+      "target_lang": "es-419",
+      "format_fidelity": 100.0,
+      "heading_order": 100.0,
+      "table_shape": 100.0,
+      "placeholders": 100.0,
+      "critical_errors_count": 0,
+      "critical_errors_high": 0,
+      "critical_errors_medium": 0,
+      "critical_errors_low": 0,
+      "critical_gate_failed": false,
+      "details": []
+    },
+    {
+      "case_id": "dose-mg-mcg-zh-Hans",
+      "fixture_kind": "regression-dose-unit-swap",
+      "target_lang": "zh-Hans",
+      "format_fidelity": 100.0,
+      "heading_order": 100.0,
+      "table_shape": 100.0,
+      "placeholders": 100.0,
+      "critical_errors_count": 1,
+      "critical_errors_high": 0,
+      "critical_errors_medium": 1,
+      "critical_errors_low": 0,
+      "critical_gate_failed": false,
+      "details": [
+        {
+          "kind": "negation_drift",
+          "severity": "medium",
+          "detail": "Source has 1 negation tokens but target language detected 0 (zh-Hans)."
+        }
+      ]
+    },
+    {
+      "case_id": "negation-do-not-zh-Hans",
+      "fixture_kind": "regression-negation-drop",
+      "target_lang": "zh-Hans",
+      "format_fidelity": 100.0,
+      "heading_order": 100.0,
+      "table_shape": 100.0,
+      "placeholders": 100.0,
+      "critical_errors_count": 1,
+      "critical_errors_high": 0,
+      "critical_errors_medium": 1,
+      "critical_errors_low": 0,
+      "critical_gate_failed": false,
+      "details": [
+        {
+          "kind": "negation_drift",
+          "severity": "medium",
+          "detail": "Source has 5 negation tokens but target language detected 0 (zh-Hans)."
+        }
+      ]
+    },
+    {
+      "case_id": "decimal-comma-zh-Hans",
+      "fixture_kind": "regression-locale-decimal",
+      "target_lang": "zh-Hans",
+      "format_fidelity": 100.0,
+      "heading_order": 100.0,
+      "table_shape": 100.0,
+      "placeholders": 100.0,
+      "critical_errors_count": 0,
+      "critical_errors_high": 0,
+      "critical_errors_medium": 0,
+      "critical_errors_low": 0,
+      "critical_gate_failed": false,
+      "details": []
+    },
+    {
+      "case_id": "placeholder-orphan-zh-Hans",
+      "fixture_kind": "regression-placeholder-gating",
+      "target_lang": "zh-Hans",
+      "format_fidelity": 100.0,
+      "heading_order": 100.0,
+      "table_shape": 100.0,
+      "placeholders": 100.0,
+      "critical_errors_count": 0,
+      "critical_errors_high": 0,
+      "critical_errors_medium": 0,
+      "critical_errors_low": 0,
+      "critical_gate_failed": false,
+      "details": []
+    },
+    {
+      "case_id": "tiny-table-zh-Hans",
+      "fixture_kind": "regression-table-shape",
+      "target_lang": "zh-Hans",
+      "format_fidelity": 100.0,
+      "heading_order": 100.0,
+      "table_shape": 100.0,
+      "placeholders": 100.0,
+      "critical_errors_count": 0,
+      "critical_errors_high": 0,
+      "critical_errors_medium": 0,
+      "critical_errors_low": 0,
+      "critical_gate_failed": false,
+      "details": []
+    },
+    {
+      "case_id": "icd-codes-preserved-zh-Hans",
+      "fixture_kind": "regression-do-not-translate",
+      "target_lang": "zh-Hans",
+      "format_fidelity": 100.0,
+      "heading_order": 100.0,
+      "table_shape": 100.0,
+      "placeholders": 100.0,
+      "critical_errors_count": 0,
+      "critical_errors_high": 0,
+      "critical_errors_medium": 0,
+      "critical_errors_low": 0,
+      "critical_gate_failed": false,
+      "details": []
+    },
+    {
+      "case_id": "dose-mg-mcg-ar-001",
+      "fixture_kind": "regression-dose-unit-swap",
+      "target_lang": "ar-001",
+      "format_fidelity": 100.0,
+      "heading_order": 100.0,
+      "table_shape": 100.0,
+      "placeholders": 100.0,
+      "critical_errors_count": 1,
+      "critical_errors_high": 0,
+      "critical_errors_medium": 1,
+      "critical_errors_low": 0,
+      "critical_gate_failed": false,
+      "details": [
+        {
+          "kind": "negation_drift",
+          "severity": "medium",
+          "detail": "Source has 1 negation tokens but target language detected 0 (ar)."
+        }
+      ]
+    },
+    {
+      "case_id": "negation-do-not-ar-001",
+      "fixture_kind": "regression-negation-drop",
+      "target_lang": "ar-001",
+      "format_fidelity": 100.0,
+      "heading_order": 100.0,
+      "table_shape": 100.0,
+      "placeholders": 100.0,
+      "critical_errors_count": 1,
+      "critical_errors_high": 0,
+      "critical_errors_medium": 1,
+      "critical_errors_low": 0,
+      "critical_gate_failed": false,
+      "details": [
+        {
+          "kind": "negation_drift",
+          "severity": "medium",
+          "detail": "Source has 5 negation tokens but target language detected 0 (ar)."
+        }
+      ]
+    },
+    {
+      "case_id": "decimal-comma-ar-001",
+      "fixture_kind": "regression-locale-decimal",
+      "target_lang": "ar-001",
+      "format_fidelity": 100.0,
+      "heading_order": 100.0,
+      "table_shape": 100.0,
+      "placeholders": 100.0,
+      "critical_errors_count": 0,
+      "critical_errors_high": 0,
+      "critical_errors_medium": 0,
+      "critical_errors_low": 0,
+      "critical_gate_failed": false,
+      "details": []
+    },
+    {
+      "case_id": "placeholder-orphan-ar-001",
+      "fixture_kind": "regression-placeholder-gating",
+      "target_lang": "ar-001",
+      "format_fidelity": 100.0,
+      "heading_order": 100.0,
+      "table_shape": 100.0,
+      "placeholders": 100.0,
+      "critical_errors_count": 0,
+      "critical_errors_high": 0,
+      "critical_errors_medium": 0,
+      "critical_errors_low": 0,
+      "critical_gate_failed": false,
+      "details": []
+    },
+    {
+      "case_id": "tiny-table-ar-001",
+      "fixture_kind": "regression-table-shape",
+      "target_lang": "ar-001",
+      "format_fidelity": 100.0,
+      "heading_order": 100.0,
+      "table_shape": 100.0,
+      "placeholders": 100.0,
+      "critical_errors_count": 0,
+      "critical_errors_high": 0,
+      "critical_errors_medium": 0,
+      "critical_errors_low": 0,
+      "critical_gate_failed": false,
+      "details": []
+    },
+    {
+      "case_id": "icd-codes-preserved-ar-001",
+      "fixture_kind": "regression-do-not-translate",
+      "target_lang": "ar-001",
+      "format_fidelity": 100.0,
+      "heading_order": 100.0,
+      "table_shape": 100.0,
+      "placeholders": 100.0,
+      "critical_errors_count": 0,
+      "critical_errors_high": 0,
+      "critical_errors_medium": 0,
+      "critical_errors_low": 0,
+      "critical_gate_failed": false,
+      "details": []
+    },
+    {
+      "case_id": "dose-mg-mcg-vi-VN",
+      "fixture_kind": "regression-dose-unit-swap",
+      "target_lang": "vi-VN",
+      "format_fidelity": 100.0,
+      "heading_order": 100.0,
+      "table_shape": 100.0,
+      "placeholders": 100.0,
+      "critical_errors_count": 1,
+      "critical_errors_high": 0,
+      "critical_errors_medium": 1,
+      "critical_errors_low": 0,
+      "critical_gate_failed": false,
+      "details": [
+        {
+          "kind": "negation_drift",
+          "severity": "medium",
+          "detail": "Source has 1 negation tokens but target language detected 0 (vi)."
+        }
+      ]
+    },
+    {
+      "case_id": "negation-do-not-vi-VN",
+      "fixture_kind": "regression-negation-drop",
+      "target_lang": "vi-VN",
+      "format_fidelity": 100.0,
+      "heading_order": 100.0,
+      "table_shape": 100.0,
+      "placeholders": 100.0,
+      "critical_errors_count": 1,
+      "critical_errors_high": 0,
+      "critical_errors_medium": 1,
+      "critical_errors_low": 0,
+      "critical_gate_failed": false,
+      "details": [
+        {
+          "kind": "negation_drift",
+          "severity": "medium",
+          "detail": "Source has 5 negation tokens but target language detected 0 (vi)."
+        }
+      ]
+    },
+    {
+      "case_id": "decimal-comma-vi-VN",
+      "fixture_kind": "regression-locale-decimal",
+      "target_lang": "vi-VN",
+      "format_fidelity": 100.0,
+      "heading_order": 100.0,
+      "table_shape": 100.0,
+      "placeholders": 100.0,
+      "critical_errors_count": 0,
+      "critical_errors_high": 0,
+      "critical_errors_medium": 0,
+      "critical_errors_low": 0,
+      "critical_gate_failed": false,
+      "details": []
+    },
+    {
+      "case_id": "placeholder-orphan-vi-VN",
+      "fixture_kind": "regression-placeholder-gating",
+      "target_lang": "vi-VN",
+      "format_fidelity": 100.0,
+      "heading_order": 100.0,
+      "table_shape": 100.0,
+      "placeholders": 100.0,
+      "critical_errors_count": 0,
+      "critical_errors_high": 0,
+      "critical_errors_medium": 0,
+      "critical_errors_low": 0,
+      "critical_gate_failed": false,
+      "details": []
+    },
+    {
+      "case_id": "tiny-table-vi-VN",
+      "fixture_kind": "regression-table-shape",
+      "target_lang": "vi-VN",
+      "format_fidelity": 100.0,
+      "heading_order": 100.0,
+      "table_shape": 100.0,
+      "placeholders": 100.0,
+      "critical_errors_count": 0,
+      "critical_errors_high": 0,
+      "critical_errors_medium": 0,
+      "critical_errors_low": 0,
+      "critical_gate_failed": false,
+      "details": []
+    },
+    {
+      "case_id": "icd-codes-preserved-vi-VN",
+      "fixture_kind": "regression-do-not-translate",
+      "target_lang": "vi-VN",
+      "format_fidelity": 100.0,
+      "heading_order": 100.0,
+      "table_shape": 100.0,
+      "placeholders": 100.0,
+      "critical_errors_count": 0,
+      "critical_errors_high": 0,
+      "critical_errors_medium": 0,
+      "critical_errors_low": 0,
+      "critical_gate_failed": false,
+      "details": []
+    },
+    {
+      "case_id": "dose-mg-mcg-fil-PH",
+      "fixture_kind": "regression-dose-unit-swap",
+      "target_lang": "fil-PH",
+      "format_fidelity": 100.0,
+      "heading_order": 100.0,
+      "table_shape": 100.0,
+      "placeholders": 100.0,
+      "critical_errors_count": 1,
+      "critical_errors_high": 0,
+      "critical_errors_medium": 1,
+      "critical_errors_low": 0,
+      "critical_gate_failed": false,
+      "details": [
+        {
+          "kind": "negation_drift",
+          "severity": "medium",
+          "detail": "Source has 1 negation tokens but target language detected 0 (tl)."
+        }
+      ]
+    },
+    {
+      "case_id": "negation-do-not-fil-PH",
+      "fixture_kind": "regression-negation-drop",
+      "target_lang": "fil-PH",
+      "format_fidelity": 100.0,
+      "heading_order": 100.0,
+      "table_shape": 100.0,
+      "placeholders": 100.0,
+      "critical_errors_count": 1,
+      "critical_errors_high": 0,
+      "critical_errors_medium": 1,
+      "critical_errors_low": 0,
+      "critical_gate_failed": false,
+      "details": [
+        {
+          "kind": "negation_drift",
+          "severity": "medium",
+          "detail": "Source has 5 negation tokens but target language detected 0 (tl)."
+        }
+      ]
+    },
+    {
+      "case_id": "decimal-comma-fil-PH",
+      "fixture_kind": "regression-locale-decimal",
+      "target_lang": "fil-PH",
+      "format_fidelity": 100.0,
+      "heading_order": 100.0,
+      "table_shape": 100.0,
+      "placeholders": 100.0,
+      "critical_errors_count": 0,
+      "critical_errors_high": 0,
+      "critical_errors_medium": 0,
+      "critical_errors_low": 0,
+      "critical_gate_failed": false,
+      "details": []
+    },
+    {
+      "case_id": "placeholder-orphan-fil-PH",
+      "fixture_kind": "regression-placeholder-gating",
+      "target_lang": "fil-PH",
+      "format_fidelity": 100.0,
+      "heading_order": 100.0,
+      "table_shape": 100.0,
+      "placeholders": 100.0,
+      "critical_errors_count": 0,
+      "critical_errors_high": 0,
+      "critical_errors_medium": 0,
+      "critical_errors_low": 0,
+      "critical_gate_failed": false,
+      "details": []
+    },
+    {
+      "case_id": "tiny-table-fil-PH",
+      "fixture_kind": "regression-table-shape",
+      "target_lang": "fil-PH",
+      "format_fidelity": 100.0,
+      "heading_order": 100.0,
+      "table_shape": 100.0,
+      "placeholders": 100.0,
+      "critical_errors_count": 0,
+      "critical_errors_high": 0,
+      "critical_errors_medium": 0,
+      "critical_errors_low": 0,
+      "critical_gate_failed": false,
+      "details": []
+    },
+    {
+      "case_id": "icd-codes-preserved-fil-PH",
+      "fixture_kind": "regression-do-not-translate",
+      "target_lang": "fil-PH",
+      "format_fidelity": 100.0,
+      "heading_order": 100.0,
+      "table_shape": 100.0,
+      "placeholders": 100.0,
+      "critical_errors_count": 0,
+      "critical_errors_high": 0,
+      "critical_errors_medium": 0,
+      "critical_errors_low": 0,
+      "critical_gate_failed": false,
+      "details": []
+    }
+  ]
+}

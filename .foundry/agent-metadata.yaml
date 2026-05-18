@@ -55,37 +55,67 @@ environments:
     # Code lives under .foundry/evaluators/<name>/. Contract tests under
     # the same folder enforce parity with the TS scorers.
     evaluators:
-      - name: format-fidelity         # sync, deterministic
+      - name: format-fidelity         # deterministic, code; catalog-registered Phase 4
         path: .foundry/evaluators/format_fidelity
         entrypoint: evaluator:FormatFidelityEvaluator
         spec: .foundry/evaluators/format_fidelity/spec.yaml
-      - name: meaning-fidelity        # back-translation + embedding cosine; uses judgeModel + embeddingModel
+        catalog_id: azureai://accounts/foundry-acw/projects/prj-discharge/evaluators/format-fidelity/versions/1
+        catalog_blob: .foundry/evaluators/format_fidelity/foundry_grade.py
+      - name: meaning-fidelity        # LLM-judge prompt form in catalog; full embedding pipeline available locally
         path: .foundry/evaluators/meaning_fidelity
         entrypoint: evaluator:MeaningFidelityEvaluator
         spec: .foundry/evaluators/meaning_fidelity/spec.yaml
-      - name: safety-judge            # LLM-as-judge rubric; uses judgeModel
+        catalog_id: azureai://accounts/foundry-acw/projects/prj-discharge/evaluators/meaning-fidelity/versions/1
+      - name: safety-judge            # LLM-judge prompt; uses judge model via suite deploymentName
         path: .foundry/evaluators/safety_judge
         entrypoint: evaluator:SafetyJudgeEvaluator
         spec: .foundry/evaluators/safety_judge/spec.yaml
-      - name: critical-errors         # sync MQM gate
+        catalog_id: azureai://accounts/foundry-acw/projects/prj-discharge/evaluators/safety-judge/versions/1
+      - name: critical-errors         # deterministic gate; catalog-registered Phase 4
         path: .foundry/evaluators/critical_errors
         entrypoint: evaluator:CriticalErrorsEvaluator
         spec: .foundry/evaluators/critical_errors/spec.yaml
-      - name: ctqs                    # composite aggregator; mirrors src/lib/scoring/ctqs.ts weights
+        catalog_id: azureai://accounts/foundry-acw/projects/prj-discharge/evaluators/critical-errors/versions/1
+        catalog_blob: .foundry/evaluators/critical_errors/foundry_grade.py
+      - name: ctqs                    # composite; OFFLINE only — not catalog-registered (no evaluator composition)
         path: .foundry/evaluators/ctqs
         entrypoint: evaluator:CTQsEvaluator
         spec: .foundry/evaluators/ctqs/spec.yaml
+        catalog_id: null              # by design; computed by scripts/compute-ctqs.ts from per-row results
 
     # Evaluation suites (Phase 4). evaluationSuites[] is the only supported
-    # shape — never write legacy testSuites[]/testCases[].
+    # shape — never write legacy testSuites[]/testCases[]. One suite per
+    # candidate agent so each shows up as its own row on the portal
+    # leaderboard. ctqs is intentionally absent from the catalog-bound list
+    # (catalog evaluators can't compose other evaluators inside a single
+    # row grade); it's computed offline by scripts/run-parity-check.ts from
+    # the per-row format/meaning/safety scores plus critical_errors_count.
     evaluationSuites:
-      - name: discharge-baseline
+      - name: discharge-baseline-gpt52
         version: "1"
-        dataset:
-          name: discharge-baseline
-          version: "1"
-        evaluators: [format-fidelity, meaning-fidelity, safety-judge, critical-errors, ctqs]
-        deploymentName: gpt-4.1-mini-601090   # judge for LLM evaluators
-        tags:
-          tier: smoke
-          purpose: bakeoff
+        dataset: { name: discharge-baseline, version: "1" }
+        targetAgent: translator-gpt52
+        evaluators: [format-fidelity, meaning-fidelity, safety-judge, critical-errors]
+        deploymentName: gpt-4.1-mini-601090   # judge model for LLM evaluators
+        tags: { tier: smoke, purpose: bakeoff, candidate: gpt-5.2 }
+      - name: discharge-baseline-mistral-large
+        version: "1"
+        dataset: { name: discharge-baseline, version: "1" }
+        targetAgent: translator-mistral-large
+        evaluators: [format-fidelity, meaning-fidelity, safety-judge, critical-errors]
+        deploymentName: gpt-4.1-mini-601090
+        tags: { tier: smoke, purpose: bakeoff, candidate: Mistral-Large-3 }
+      - name: discharge-baseline-llama
+        version: "1"
+        dataset: { name: discharge-baseline, version: "1" }
+        targetAgent: translator-llama
+        evaluators: [format-fidelity, meaning-fidelity, safety-judge, critical-errors]
+        deploymentName: gpt-4.1-mini-601090
+        tags: { tier: smoke, purpose: bakeoff, candidate: Llama-3.3-70B-Instruct }
+      - name: discharge-baseline-deepseek
+        version: "1"
+        dataset: { name: discharge-baseline, version: "1" }
+        targetAgent: translator-deepseek
+        evaluators: [format-fidelity, meaning-fidelity, safety-judge, critical-errors]
+        deploymentName: gpt-4.1-mini-601090
+        tags: { tier: smoke, purpose: bakeoff, candidate: DeepSeek-V3.2 }
