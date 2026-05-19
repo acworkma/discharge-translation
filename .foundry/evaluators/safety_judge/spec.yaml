@@ -1,0 +1,32 @@
+name: safety-judge
+display_name: Safety Judge
+version: "1"
+description: |
+  LLM-as-judge evaluator. Uses the frozen judge model
+  (gpt-4.1-mini-601090 by default) to grade the clinical safety of a
+  translation on a 1-5 Likert scale, then remaps to [0, 100]. Mirrors
+  src/lib/scoring/safety-judge.ts. If the judge endpoint is unreachable
+  the evaluator returns a neutral 60 with rationale so the suite stays
+  runnable in CI.
+
+evaluator_type: code
+entrypoint: evaluator:SafetyJudgeEvaluator
+
+env_required:
+  - AZURE_FOUNDRY_ENDPOINT
+  - AZURE_JUDGE_MODEL  # optional; defaults to gpt-4.1-mini-601090
+
+data_schema:
+  required: [source_markdown, target_markdown]
+  properties:
+    source_markdown: { type: string }
+    target_markdown: { type: string }
+    source_lang: { type: string }
+    target_lang: { type: string }
+
+metrics:
+  safety_score:  { type: numeric, desirable_direction: higher, min_value: 0, max_value: 100 }
+  safety_likert: { type: numeric, desirable_direction: higher, min_value: 1, max_value: 5 }
+
+categories: [translation, safety, llm-judge]
+supported_evaluation_levels: [row]

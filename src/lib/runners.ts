@@ -2,6 +2,7 @@
 //   - azure-translator             — Azure AI Translator (Text Translation v3)
 //   - azure-doc-translator         — Azure AI Document Translation (async, format-preserving NMT)
 //   - foundry:<deployment>         — Foundry/AOAI chat models via Inference SDK
+//   - foundry-agent:<name>         — Foundry prompt agent (instructions+model fetched from project)
 //
 // Runners speak two shapes:
 //   - translate(input)             — legacy plaintext in, plaintext out.
@@ -19,7 +20,7 @@ import {
   generateBlobSASQueryParameters,
   type UserDelegationKey
 } from '@azure/storage-blob';
-import { credential, config, COGNITIVE_SERVICES_SCOPE, blobEndpoint } from './azure';
+import { credential, config, COGNITIVE_SERVICES_SCOPE, AI_FOUNDRY_SCOPE, blobEndpoint } from './azure';
 
 // ---------------------------------------------------------------------------
 // Shared types
@@ -476,9 +477,119 @@ export function listAvailableFoundryModels() {
   return config.foundryModels;
 }
 
+// ---------------------------------------------------------------------------
+// Azure AI Foundry — prompt agents (Phase 2, feat/foundry-demo)
+// ---------------------------------------------------------------------------
+//
+// A `foundry-agent:<name>` runner fetches the agent's authoritative
+// `instructions` + `model` from the Foundry project's agents data plane,
+// caches them, and proxies the actual chat completion through the existing
+// inference endpoint (callFoundryChat). This makes the Foundry portal the
+// source-of-truth for prompt content: editing the agent in the portal takes
+// effect on the next runtime refresh (60s TTL).
+
+const AGENT_DEFINITION_TTL_MS = 60_000;
+const FOUNDRY_AGENT_API_VERSION = '2025-05-15-preview';
+
+interface CachedAgentDef {
+  model: string;
+  instructions: string;
+  fetchedAt: number;
+}
+
+const _agentDefCache = new Map<string, CachedAgentDef>();
+
+async function fetchAgentDefinition(agentName: string): Promise<CachedAgentDef> {
+  const cached = _agentDefCache.get(agentName);
+  if (cached && Date.now() - cached.fetchedAt < AGENT_DEFINITION_TTL_MS) {
+    return cached;
+  }
+  if (!config.aiProjectEndpoint) {
+    throw new Error(
+      'AZURE_AI_PROJECT_ENDPOINT not configured — cannot resolve Foundry agent ' + agentName
+    );
+  }
+  // Agents data plane requires the ai.azure.com audience, not cognitiveservices.
+  const token = await credential().getToken(AI_FOUNDRY_SCOPE);
+  if (!token?.token) {
+    throw new Error('Failed to acquire AAD token for Foundry agents data plane');
+  }
+  const url = `${config.aiProjectEndpoint.replace(/\/$/, '')}/agents/${encodeURIComponent(
+    agentName
+  )}?api-version=${FOUNDRY_AGENT_API_VERSION}`;
+  const res = await fetch(url, {
+    headers: { authorization: `Bearer ${token.token}` }
+  });
+  if (!res.ok) {
+    const body = await res.text().catch(() => '');
+    throw new Error(`Foundry agent ${agentName} fetch ${res.status}: ${body.slice(0, 300)}`);
+  }
+  const payload = (await res.json()) as {
+    versions?: { latest?: { definition?: { model?: string; instructions?: string } } };
+  };
+  const def = payload?.versions?.latest?.definition;
+  const model = def?.model;
+  const instructions = def?.instructions;
+  if (!model || !instructions) {
+    throw new Error(
+      `Foundry agent ${agentName} returned a definition without model/instructions`
+    );
+  }
+  const entry: CachedAgentDef = { model, instructions, fetchedAt: Date.now() };
+  _agentDefCache.set(agentName, entry);
+  return entry;
+}
+
+export function foundryAgentRunner(agentName: string): Runner {
+  const info = config.foundryAgents.find((a) => a.name === agentName);
+  const display = info?.display || agentName;
+  return {
+    id: `foundry-agent:${agentName}`,
+    displayName: `Foundry Agent · ${display}`,
+    kind: 'foundry',
+
+    async translate({ text, sourceLang, targetLang }) {
+      const def = await fetchAgentDefinition(agentName);
+      const userPrompt =
+        `Source language: ${sourceLang || 'unspecified'}\nTarget language: ${targetLang}\n\n` +
+        '--- BEGIN MARKDOWN ---\n' + text + '\n--- END MARKDOWN ---';
+      const r = await callFoundryChat(def.model, def.instructions, userPrompt);
+      if (!r.content || !r.content.trim()) throw new Error(emptyHint(r.outputTokens));
+      return {
+        translatedText: r.content,
+        latencyMs: r.latencyMs,
+        inputTokens: r.inputTokens,
+        outputTokens: r.outputTokens
+      };
+    },
+
+    async translateStructured({ markdown, sourceLang, targetLang }) {
+      const def = await fetchAgentDefinition(agentName);
+      const userPrompt =
+        `Source language: ${sourceLang || 'unspecified'}\nTarget language: ${targetLang}\n\n` +
+        '--- BEGIN MARKDOWN ---\n' + markdown + '\n--- END MARKDOWN ---';
+      const r = await callFoundryChat(def.model, def.instructions, userPrompt);
+      if (!r.content || !r.content.trim()) throw new Error(emptyHint(r.outputTokens));
+      return {
+        markdown: r.content,
+        latencyMs: r.latencyMs,
+        inputTokens: r.inputTokens,
+        outputTokens: r.outputTokens,
+        kind: 'llm'
+      };
+    }
+  };
+}
+
+export function listAvailableFoundryAgents() {
+  return config.foundryAgents;
+}
+
 export function resolveRunner(runnerId: string): Runner {
   if (runnerId === azureTranslator.id) return azureTranslator;
   if (runnerId === azureDocTranslator.id) return azureDocTranslator;
+  if (runnerId.startsWith('foundry-agent:'))
+    return foundryAgentRunner(runnerId.slice('foundry-agent:'.length));
   if (runnerId.startsWith('foundry:')) return foundryRunner(runnerId.slice('foundry:'.length));
   throw new Error(`Unknown runner: ${runnerId}`);
 }

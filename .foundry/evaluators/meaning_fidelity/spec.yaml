@@ -1,0 +1,37 @@
+name: meaning-fidelity
+display_name: Meaning Fidelity
+version: "1"
+description: |
+  Networked semantic-similarity evaluator. Back-translates the target into
+  the source language using Azure Translator, embeds both sides per segment
+  with an Azure OpenAI embedding model, computes mean and min cosine, then
+  remaps mean from [0.5, 1.0] to [0, 100]. Mirrors
+  src/lib/scoring/meaning-fidelity.ts. Sensitive to evaluator runtime
+  credentials — see spec env_required.
+
+evaluator_type: code
+entrypoint: evaluator:MeaningFidelityEvaluator
+
+env_required:
+  - AZURE_TRANSLATOR_ENDPOINT
+  - AZURE_FOUNDRY_ENDPOINT
+  - AZURE_EMBEDDING_DEPLOYMENT
+  # Either AAD via DefaultAzureCredential or these key fallbacks:
+  # AZURE_TRANSLATOR_KEY, AZURE_FOUNDRY_API_KEY
+
+data_schema:
+  required: [source_markdown, target_markdown]
+  properties:
+    source_markdown: { type: string }
+    target_markdown: { type: string }
+    source_lang: { type: string }
+    target_lang: { type: string }
+
+metrics:
+  meaning_fidelity: { type: numeric, desirable_direction: higher, min_value: 0, max_value: 100 }
+  mean_cosine:      { type: numeric, desirable_direction: higher, min_value: -1, max_value: 1 }
+  min_cosine:       { type: numeric, desirable_direction: higher, min_value: -1, max_value: 1 }
+  segments_compared:{ type: numeric, desirable_direction: higher, min_value: 0, max_value: 10000 }
+
+categories: [translation, semantic, networked]
+supported_evaluation_levels: [row]

@@ -1,0 +1,22 @@
+# azd configuration for the discharge-translation Foundry demo.
+#
+# This file makes the existing Bicep (infra/main.bicep) drivable by azd so
+# `azd env get-values` can seed .foundry/agent-metadata.yaml per the
+# microsoft-foundry skill (Phase 1, step 3).
+#
+# Branch: feat/foundry-demo. The default azd env name (foundry-demo-hok) is
+# demo-specific so `azd down` only tears down demo resources. main is the
+# rollback target and is never touched by azd.
+
+name: discharge-translation
+metadata:
+  template: discharge-translation@0.1.0
+
+infra:
+  provider: bicep
+  path: infra
+  module: main
+
+# Hooks left empty for now — Container App image is built/pushed by the existing
+# GitHub Actions workflow, not by azd. We can add a `prepackage` hook later if
+# we want `azd up` to also rebuild the image.

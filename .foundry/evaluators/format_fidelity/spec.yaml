@@ -1,0 +1,47 @@
+# Custom evaluator spec for format-fidelity.
+# Mirrors src/lib/scoring/format-fidelity.ts. Registered into the Foundry
+# project evaluator catalog at Phase 4 (portal-time); for now consumed
+# locally by the evaluationSuites runner.
+
+name: format-fidelity
+display_name: Format Fidelity
+version: "1"
+description: |
+  Deterministic structural comparison between source and translated Markdown.
+  Returns a 0-100 score plus 8 sub-metrics covering heading order, list
+  counts, table shape, paragraph parity, and [[PHn]] placeholder coverage.
+  No LLM, no network — fully reproducible. Authoritative twin lives at
+  src/lib/scoring/format-fidelity.ts; the parity test in this folder is
+  the contract that keeps them aligned.
+
+evaluator_type: code
+entrypoint: evaluator:FormatFidelityEvaluator
+
+# Each input field maps to a dataset column at eval-time.
+data_schema:
+  required: [source_markdown, target_markdown]
+  properties:
+    source_markdown:
+      type: string
+      description: Protected source Markdown with [[PHn]] placeholders.
+    target_markdown:
+      type: string
+      description: Candidate translation Markdown.
+
+metrics:
+  format_fidelity:
+    type: numeric
+    desirable_direction: higher
+    min_value: 0
+    max_value: 100
+  heading_order: { type: numeric, desirable_direction: higher, min_value: 0, max_value: 100 }
+  heading_count: { type: numeric, desirable_direction: higher, min_value: 0, max_value: 100 }
+  bullet_count:  { type: numeric, desirable_direction: higher, min_value: 0, max_value: 100 }
+  numbered_count:{ type: numeric, desirable_direction: higher, min_value: 0, max_value: 100 }
+  table_count:   { type: numeric, desirable_direction: higher, min_value: 0, max_value: 100 }
+  table_shape:   { type: numeric, desirable_direction: higher, min_value: 0, max_value: 100 }
+  paragraph_count:{ type: numeric, desirable_direction: higher, min_value: 0, max_value: 100 }
+  placeholders:  { type: numeric, desirable_direction: higher, min_value: 0, max_value: 100 }
+
+categories: [translation, structure, deterministic]
+supported_evaluation_levels: [row]

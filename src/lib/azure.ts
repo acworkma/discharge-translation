@@ -39,6 +39,15 @@ export const config = {
   foundryApiKey: process.env.AZURE_FOUNDRY_API_KEY || '',
   foundryModels: parseFoundryModels(),
 
+  // Foundry project endpoint for the agents data plane (e.g.
+  // https://foundry-acw.services.ai.azure.com/api/projects/prj-discharge).
+  // Wired in Phase 1 of feat/foundry-demo; consumed by the foundry-agent runner.
+  aiProjectEndpoint: process.env.AZURE_AI_PROJECT_ENDPOINT || '',
+  // Prompt agents exposed as runners (Phase 2). Each entry references an agent
+  // declared in the Foundry project; the runner fetches `instructions` + `model`
+  // from the project at startup. Provider/tier are UI hints only.
+  foundryAgents: parseFoundryAgents(),
+
   // Embeddings deployment used by the meaning-fidelity scorer (back-translation
   // cosine, ask3 §5). Default is text-embedding-3-large; swap to a successor
   // (text-embedding-4 / GPT-5 embedding) via env when it reaches the region.
@@ -88,6 +97,39 @@ function parseFoundryModels(): FoundryModelInfo[] {
     .map((id) => ({ id, provider: 'other', tier: 'balanced' }));
 }
 
+export interface FoundryAgentInfo {
+  /** Agent name as declared in the Foundry project (e.g. translator-gpt52). */
+  name: string;
+  /** UI display label; falls back to name. */
+  display?: string;
+  /** Model deployment hint (UI only; runtime fetches authoritative value from the agent). */
+  modelHint?: string;
+  /** openai | mistral | meta | deepseek | other — UI grouping. */
+  provider: string;
+  /** flagship | balanced | budget — UI grouping. */
+  tier: string;
+}
+
+function parseFoundryAgents(): FoundryAgentInfo[] {
+  const raw = process.env.AZURE_FOUNDRY_AGENTS_JSON;
+  if (!raw) return [];
+  try {
+    const arr = JSON.parse(raw);
+    if (!Array.isArray(arr)) return [];
+    return arr
+      .filter((x) => x && typeof x.name === 'string')
+      .map((x) => ({
+        name: String(x.name),
+        display: x.display ? String(x.display) : undefined,
+        modelHint: x.modelHint ? String(x.modelHint) : undefined,
+        provider: String(x.provider || 'other'),
+        tier: String(x.tier || 'balanced')
+      }));
+  } catch {
+    return [];
+  }
+}
+
 export function blobEndpoint(): string {
   if (!config.storageAccount) throw new Error('AZURE_STORAGE_ACCOUNT not configured');
   return `https://${config.storageAccount}.blob.core.windows.net`;
@@ -98,5 +140,11 @@ export function tableEndpoint(): string {
   return `https://${config.storageAccount}.table.core.windows.net`;
 }
 
-// Cognitive Services data plane scope used for AAD-based Translator calls.
+// Cognitive Services data plane scope used for AAD-based Translator calls
+// and the Foundry /models inference endpoint.
 export const COGNITIVE_SERVICES_SCOPE = 'https://cognitiveservices.azure.com/.default';
+
+// Azure AI Foundry agents/projects data plane scope. The agents API on the
+// project endpoint validates this audience explicitly and rejects
+// cognitiveservices tokens with "audience is incorrect (https://ai.azure.com)".
+export const AI_FOUNDRY_SCOPE = 'https://ai.azure.com/.default';

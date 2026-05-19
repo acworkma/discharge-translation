@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import {
   listAvailableFoundryModels,
+  listAvailableFoundryAgents,
   azureTranslator,
   azureDocTranslator
 } from '@/lib/runners';
@@ -28,6 +29,22 @@ export async function GET() {
       provider: 'azure',
       tier: 'baseline'
     });
+  }
+  // Foundry prompt agents (Phase 2, feat/foundry-demo). Listed before the
+  // raw model list so the agent path is the default surfaced choice when
+  // both are available — the agent is the Foundry-portal-managed prompt.
+  if (config.aiProjectEndpoint) {
+    runners.push(
+      ...listAvailableFoundryAgents().map((a) => ({
+        id: `foundry-agent:${a.name}`,
+        displayName: `Foundry Agent · ${a.display || a.name}`,
+        kind: 'foundry-agent',
+        provider: a.provider,
+        tier: a.tier,
+        agentName: a.name,
+        modelHint: a.modelHint
+      }))
+    );
   }
   runners.push(
     ...listAvailableFoundryModels().map((m) => ({

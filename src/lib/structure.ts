@@ -247,7 +247,23 @@ function normalizeHeadingText(s: string): string {
 
 async function docxToMarkdown(buf: Buffer): Promise<string> {
   const mammoth = (await import('mammoth')).default;
-  const html = (await mammoth.convertToHtml({ buffer: buf })).value || '';
+  // mammoth's default inlines DOCX images as <img src="data:image/...;base64,...">.
+  // For a clinical document those payloads are useless to the LLM (hundreds of
+  // KB of base64) and they blow past the embedding 8192-token cap, so we
+  // suppress them and emit a stable [FIGURE] token that translates cleanly
+  // and keeps the surrounding paragraph structure intact.
+  const html =
+    (
+      await mammoth.convertToHtml(
+        { buffer: buf },
+        {
+          convertImage: mammoth.images.imgElement(async () => ({
+            src: '',
+            alt: '[FIGURE]'
+          }))
+        }
+      )
+    ).value || '';
   const TurndownService = (await import('turndown')).default;
   const turndown = new TurndownService({
     headingStyle: 'atx',
@@ -255,13 +271,27 @@ async function docxToMarkdown(buf: Buffer): Promise<string> {
     codeBlockStyle: 'fenced',
     emDelimiter: '_'
   });
+  // Drop any <img> outright (with or without a base64 src). The alt text we
+  // set above ([FIGURE]) survives via the explicit rule below.
+  turndown.addRule('stripImg', {
+    filter: 'img',
+    replacement: (_c, node) => {
+      type N = { getAttribute?: (k: string) => string | null };
+      const alt = (node as N).getAttribute?.('alt') || '';
+      return alt ? alt : '[FIGURE]';
+    }
+  });
   // Turndown's default does not handle tables well; install the lightweight
   // built-in GFM table rule manually.
   turndown.addRule('table', {
     filter: 'table',
     replacement: htmlTableToMarkdown
   });
-  return turndown.turndown(html);
+  const md = turndown.turndown(html);
+  // Belt-and-braces: if anything still leaks a data:image URL (e.g. inline
+  // CSS background-images that turndown picked up), nuke it. The regex is
+  // greedy on the base64 body which can contain '+', '/', '=' and newlines.
+  return md.replace(/!\[[^\]]*\]\(data:image\/[^)]+\)/gi, '[FIGURE]');
 }
 
 function htmlTableToMarkdown(_content: string, node: unknown): string {
