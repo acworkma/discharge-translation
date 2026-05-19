@@ -172,6 +172,9 @@ resource translator 'Microsoft.CognitiveServices/accounts@2024-04-01-preview' = 
 // via a cross-RG module so the project exists in Bicep state (Phase 1,
 // feat/foundry-demo). Account-level role assignments for the UAMI are made by
 // the deploy workflow (az role assignment).
+@description('Whether the Foundry project module manages the workload UAMI -> Azure AI User role assignment on the project. Default true. Set false if RBAC is already managed out-of-band (Foundry portal, manual az, MCP tool) to keep re-deploys idempotent.')
+param manageProjectRbac bool = true
+
 module foundryProject 'foundry-project.bicep' = {
   name: 'foundry-project-${foundryProjectName}'
   scope: resourceGroup(foundryAccountResourceGroup)
@@ -180,6 +183,7 @@ module foundryProject 'foundry-project.bicep' = {
     location: location
     projectName: foundryProjectName
     workloadUamiPrincipalId: uami.properties.principalId
+    manageProjectRbac: manageProjectRbac
   }
 }
 
