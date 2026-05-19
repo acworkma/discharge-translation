@@ -476,9 +476,16 @@ export function listAvailableFoundryModels() {
   return config.foundryModels;
 }
 
+export function listAvailableFoundryAgents() {
+  return config.foundryAgents;
+}
+
 export function resolveRunner(runnerId: string): Runner {
   if (runnerId === azureTranslator.id) return azureTranslator;
   if (runnerId === azureDocTranslator.id) return azureDocTranslator;
   if (runnerId.startsWith('foundry:')) return foundryRunner(runnerId.slice('foundry:'.length));
+  if (runnerId.startsWith('foundry-agent:')) {
+    throw new Error('Foundry agent runner is not yet implemented on this build');
+  }
   throw new Error(`Unknown runner: ${runnerId}`);
 }
