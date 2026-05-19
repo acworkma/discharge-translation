@@ -36,6 +36,9 @@ param foundryAccountName string = 'foundry-acw'
 @description('Foundry project name to declare under the account')
 param foundryProjectName string = 'prj-discharge'
 
+@description('Deploy the cross-RG Foundry project module. Default false so CI without rg-foundry RBAC can ship app-only changes. Run locally with -p deployFoundryProject=true when changing the Foundry project itself.')
+param deployFoundryProject bool = false
+
 @description('JSON array of available Foundry model deployments for the UI picker')
 param foundryModelsJson string = '[{"id":"gpt-5.2","provider":"openai","tier":"flagship"},{"id":"gpt-4.1","provider":"openai","tier":"balanced"},{"id":"gpt-4.1-mini-601090","provider":"openai","tier":"budget","display":"gpt-4.1-mini"},{"id":"Mistral-Large-3","provider":"mistral","tier":"flagship"},{"id":"Llama-3.3-70B-Instruct","provider":"meta","tier":"balanced"},{"id":"DeepSeek-V3.2","provider":"deepseek","tier":"flagship"}]'
 
@@ -172,7 +175,7 @@ resource translator 'Microsoft.CognitiveServices/accounts@2024-04-01-preview' = 
 // via a cross-RG module so the project exists in Bicep state (Phase 1,
 // feat/foundry-demo). Account-level role assignments for the UAMI are made by
 // the deploy workflow (az role assignment).
-module foundryProject 'foundry-project.bicep' = {
+module foundryProject 'foundry-project.bicep' = if (deployFoundryProject) {
   name: 'foundry-project-${foundryProjectName}'
   scope: resourceGroup(foundryAccountResourceGroup)
   params: {
@@ -303,6 +306,6 @@ output containerAppFqdn string = !empty(containerImage) ? ca.properties.configur
 output acrLoginServer string = '${acr.name}.azurecr.io'
 output uamiPrincipalId string = uami.properties.principalId
 output uamiClientId string = uami.properties.clientId
-output AZURE_AI_PROJECT_ENDPOINT string = foundryProject.outputs.projectEndpoint
-output AZURE_AI_PROJECT_RESOURCE_ID string = foundryProject.outputs.projectResourceId
+output AZURE_AI_PROJECT_ENDPOINT string = deployFoundryProject ? foundryProject.outputs.projectEndpoint : foundryProjectEndpoint
+output AZURE_AI_PROJECT_RESOURCE_ID string = deployFoundryProject ? foundryProject.outputs.projectResourceId : ''
 output AZURE_CONTAINER_REGISTRY_NAME string = acr.name
