@@ -182,15 +182,6 @@ function entityToUpload(e: Record<string, unknown>): UploadRecord {
 }
 
 function runToEntity(r: RunRecord) {
-  // Azure Table entity properties cap at 64KB / 32K UTF-16 chars. The full
-  // translation is already persisted at runs/{id}/{safeRunner}.txt by
-  // writeRunOutput(), so we strip translatedText from the table copy and
-  // hydrate it on read. We also defensively truncate error messages.
-  const slim: RunnerResult[] = r.results.map((x) => ({
-    ...x,
-    translatedText: undefined,
-    error: x.error ? x.error.slice(0, 4000) : x.error
-  }));
   return {
     partitionKey: PARTITION,
     rowKey: r.id,
@@ -198,28 +189,8 @@ function runToEntity(r: RunRecord) {
     createdAt: r.createdAt,
     status: r.status,
     selectedRunners: JSON.stringify(r.selectedRunners),
-    results: JSON.stringify(slim)
+    results: JSON.stringify(r.results)
   };
-}
-
-// Hydrate translatedText for each succeeded runner from its blob, in parallel.
-// Safe to call from getRun (single record); skipped in listRuns.
-async function hydrateRunTranslations(r: RunRecord): Promise<RunRecord> {
-  const container = blobService().getContainerClient(config.uploadsContainer);
-  await Promise.all(
-    r.results.map(async (res) => {
-      if (res.translatedText || res.status !== 'succeeded') return;
-      const safe = res.runnerId.replace(/[^a-zA-Z0-9._-]/g, '_');
-      const path = `runs/${r.id}/${safe}.txt`;
-      try {
-        const buf = await container.getBlockBlobClient(path).downloadToBuffer();
-        res.translatedText = buf.toString('utf-8');
-      } catch {
-        // Blob may not exist for legacy runs or failed writes; leave undefined.
-      }
-    })
-  );
-  return r;
 }
 
 function entityToRun(e: Record<string, unknown>): RunRecord {
@@ -326,7 +297,7 @@ export const store = {
     await ensureInfra();
     try {
       const e = await runsTable().getEntity<Record<string, unknown>>(PARTITION, id);
-      return await hydrateRunTranslations(entityToRun(e));
+      return entityToRun(e);
     } catch (err: unknown) {
       if ((err as { statusCode?: number })?.statusCode === 404) return undefined;
       throw err;

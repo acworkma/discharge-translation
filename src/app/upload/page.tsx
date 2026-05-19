@@ -43,6 +43,7 @@ export default function UploadPage() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [dragOver, setDragOver] = useState(false);
 
   useEffect(() => {
     fetch('/api/runners')
@@ -50,16 +51,7 @@ export default function UploadPage() {
       .then((d) => {
         const list: RunnerOpt[] = d.runners || [];
         setRunners(list);
-        // Default selection: all Azure baselines + first flagship Foundry.
-        const def = new Set<string>();
-        for (const r of list) if (r.provider === 'azure') def.add(r.id);
-        const flagship = list.find((x) => x.kind === 'foundry' && x.tier === 'flagship');
-        if (flagship) def.add(flagship.id);
-        else {
-          const f = list.find((x) => x.kind === 'foundry');
-          if (f) def.add(f.id);
-        }
-        setSelected(def);
+        // No models pre-selected — user explicitly chooses which engines to compare.
       });
   }, []);
 
@@ -107,14 +99,56 @@ export default function UploadPage() {
       <form onSubmit={submit} className="space-y-5">
         <div>
           <label className="block text-sm font-medium mb-1">Discharge document</label>
-          <input
-            type="file"
-            onChange={(e) => setFile(e.target.files?.[0] || null)}
-            className="block w-full text-sm"
-            accept=".txt,.md,.pdf,.docx,text/plain,text/markdown,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-          />
+          <label
+            onDragOver={(e) => {
+              e.preventDefault();
+              setDragOver(true);
+            }}
+            onDragEnter={(e) => {
+              e.preventDefault();
+              setDragOver(true);
+            }}
+            onDragLeave={() => setDragOver(false)}
+            onDrop={(e) => {
+              e.preventDefault();
+              setDragOver(false);
+              const f = e.dataTransfer.files?.[0];
+              if (f) setFile(f);
+            }}
+            className={`flex flex-col items-center justify-center w-full border-2 border-dashed rounded px-4 py-6 cursor-pointer text-sm transition-colors ${
+              dragOver
+                ? 'border-sky-400 bg-sky-50'
+                : file
+                  ? 'border-emerald-300 bg-emerald-50'
+                  : 'border-slate-300 bg-slate-50 hover:bg-slate-100'
+            }`}
+          >
+            <input
+              type="file"
+              onChange={(e) => setFile(e.target.files?.[0] || null)}
+              className="hidden"
+              accept=".txt,.md,.pdf,.docx,text/plain,text/markdown,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            />
+            {file ? (
+              <>
+                <span className="font-medium text-emerald-800">{file.name}</span>
+                <span className="text-xs text-slate-500 mt-1">
+                  {(file.size / 1024).toFixed(1)} KB · click or drop to replace
+                </span>
+              </>
+            ) : (
+              <>
+                <span className="font-medium text-slate-700">
+                  Drop a file here or click to browse
+                </span>
+                <span className="text-xs text-slate-500 mt-1">
+                  TXT, MD, PDF (text-extractable), or DOCX
+                </span>
+              </>
+            )}
+          </label>
           <p className="text-xs text-slate-500 mt-1">
-            TXT, MD, PDF (text-extractable), or DOCX. PHI-safe: text is not logged.
+            PHI-safe: text is not logged.
           </p>
         </div>
         <div>
